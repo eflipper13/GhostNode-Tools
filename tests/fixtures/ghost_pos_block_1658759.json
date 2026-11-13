@@ -1,0 +1,25 @@
+{
+  "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "height": 1658759,
+  "previousblockhash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "nextblockhash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "nTx": 1,
+  "tx": [{
+    "txid": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "vin": [{"txid": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", "vout": 2}],
+    "vout": [
+      {"n": 0, "type": "data", "data_hex": "00"},
+      {"n": 1, "type": "standard", "value": 1.0, "valueSat": 100000000,
+       "scriptPubKey": {"asm": "OP_ISCOINSTAKE OP_DUP OP_HASH160 11 OP_EQUALVERIFY OP_CHECKSIG",
+                        "hex": "51", "addresses": ["GsyntheticAddressOne"],
+                        "stakeaddresses": ["GsyntheticStakeAddressOne"]}},
+      {"n": 2, "type": "standard", "value": 2.0, "valueSat": 200000000,
+       "scriptPubKey": {"asm": "OP_ISCOINSTAKE OP_DUP OP_HASH160 22 OP_EQUALVERIFY OP_CHECKSIG",
+                        "hex": "52", "addresses": ["GsyntheticAddressOne"],
+                        "stakeaddresses": ["GsyntheticStakeAddressOne"]}},
+      {"n": 3, "type": "standard", "value": 0.5, "valueSat": 50000000,
+       "scriptPubKey": {"asm": "OP_DUP OP_HASH160 33 OP_EQUALVERIFY OP_CHECKSIG",
+                        "hex": "53", "addresses": ["GsyntheticExternalAddress"]}}
+    ]
+  }]
+}

@@ -1,0 +1,18 @@
+{
+  "hash": "20a4ab0e868c2667ccebee4a7c6f105f9320f5e510a9c32ef3371a13691ee173",
+  "height": 1658462,
+  "tx": [
+    {
+      "txid": "9ddb2ef4c5eb17d7380282b3a218db2383dc1f7a80ea34bdb8efe00193de5ddd",
+      "vout": [
+        {},
+        {
+          "n": 1,
+          "scriptPubKey": {
+            "asm": "OP_ISCOINSTAKE"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+[Unit]
+Description=GhostNode Tools read-only dashboard (%i)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=%i
+Group=%i
+WorkingDirectory=%h/ghostnode-tools
+EnvironmentFile=-%h/.config/ghostnode-tools/%i.env
+ExecStart=%h/ghostnode-tools/.venv/bin/python -m ghostnode web --host 127.0.0.1 --port 44678
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=%h/ghostnode-tools/data
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

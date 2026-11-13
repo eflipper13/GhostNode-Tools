@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GhostNode Tools</title>
+  <style>
+    :root { color-scheme: dark; --bg:#101018; --panel:#1B1B28; --line:#35354A; --text:#FFFFFF; --muted:#A0A5B3; --accent:#9D7BFF; --blue:#45B8FF; --ok:#B6FF00; --warn:#F4B942; --error:#FF5C61; }
+    * { box-sizing:border-box; } body { margin:0; background:var(--bg); color:var(--text); font:15px system-ui,sans-serif; }
+    main { width:min(1500px,calc(100% - 32px)); margin:auto; padding:18px 0 34px; } header { display:flex; justify-content:space-between; gap:16px; align-items:end; margin-bottom:14px; }
+    h1 { margin:0; color:var(--text); font-size:clamp(1.7rem,4vw,2.35rem); letter-spacing:-.02em; } h2 { font-size:1rem; margin:0 0 10px; } .muted { color:var(--muted); }
+    .toolbar { display:flex; align-items:center; gap:12px; margin:0 0 16px; } button { color:var(--bg); background:var(--accent); border:0; border-radius:6px; padding:8px 12px; cursor:pointer; font-weight:700; } button:disabled { opacity:.55; cursor:wait; } .connection { color:var(--muted); font-size:.9rem; } .connection.ok { color:var(--ok); } .connection.error { color:var(--error); }
+    nav { display:flex; flex-wrap:wrap; gap:7px; margin:0 0 16px; padding:8px; border:1px solid var(--line); background:rgba(27,27,40,.72); border-radius:8px; } nav a { color:var(--muted); text-decoration:none; padding:5px 9px; border-radius:5px; } nav a:hover, nav a:focus { color:var(--text); background:#29243F; outline:none; } .grid { display:grid; grid-template-columns:repeat(12,1fr); gap:10px; } section { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:13px 15px; min-width:0; scroll-margin-top:12px; } section.wide { grid-column:span 6; } section.compact { grid-column:span 3; } section.full { grid-column:1/-1; }
+    dl { display:grid; grid-template-columns:1fr auto; gap:7px 12px; margin:0; } dt { color:var(--muted); } dd { margin:0; text-align:right; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+    .peer-details { border-top:1px solid var(--line); margin-top:10px; padding-top:8px; } summary { cursor:pointer; color:var(--accent); font-weight:700; } table { width:100%; border-collapse:collapse; font-size:.88rem; } th,td { padding:7px 8px; border-bottom:1px solid var(--line); text-align:left; } th { color:var(--muted); font-weight:500; } .table-wrap { overflow-x:auto; }
+    .badge { border-radius:999px; padding:5px 10px; font-weight:700; font-size:.78rem; } .OK { color:var(--ok); border:1px solid var(--ok); } .WARN { color:var(--warn); border:1px solid var(--warn); } .ERROR,.UNKNOWN { color:var(--error); border:1px solid var(--error); }
+    .chart-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:10px; } .chart { border-top:1px solid var(--line); padding-top:8px; min-height:100px; } .chart h3 { font-size:.85rem; color:var(--muted); margin:0 0 4px; } .chart svg { width:100%; height:90px; display:block; } .chart path { fill:none; stroke:var(--accent); stroke-width:2; } .chart .empty { color:var(--muted); font-size:.85rem; padding:24px 0; }
+    .intelligence-table { margin-top:10px; max-height:340px; overflow:auto; } .intelligence-table td:nth-child(3), .intelligence-table td:nth-child(6) { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; white-space:nowrap; }
+    .user-overview { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:10px; margin:0 0 16px; } .user-card { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:14px; min-width:0; } .user-card h2 { color:var(--muted); font-size:.82rem; margin:0 0 8px; font-weight:600; } .user-value { font-size:clamp(1.15rem,2.2vw,1.7rem); font-weight:750; overflow-wrap:anywhere; font-variant-numeric:tabular-nums; } .user-help { color:var(--muted); font-size:.78rem; margin-top:8px; line-height:1.35; }
+    .user-status { margin:0 0 16px; color:var(--muted); font-size:.88rem; }
+    @media (max-width:900px) { section.compact, section.wide { grid-column:span 6; } .user-overview { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+    @media (max-width:520px) { header { align-items:start; flex-direction:column; } .toolbar { flex-wrap:wrap; } main { width:calc(100% - 20px); padding:14px 0 28px; } section.compact, section.wide { grid-column:1/-1; } section { padding:12px; } th,td { padding:6px 4px; } .user-overview { grid-template-columns:repeat(2,minmax(0,1fr)); } .user-card:last-child { grid-column:1/-1; } }
+  </style>
+</head>
+<body>
+<main id="dashboard">
+  <header><div><h1>GhostNode Tools</h1><div class="muted">Read-only node dashboard</div></div><span class="badge {{ snapshot.status }}">{{ snapshot.status }}</span></header>
+  <nav aria-label="Dashboard sections"><a href="#dashboard">Dashboard</a><a href="#staking-intelligence">Staking Intelligence</a><a href="#performance-history">Performance</a><a href="#rewards-intelligence">Rewards</a><a href="#chain-monitoring">Chain</a><a href="#collector-health">Collector</a><a href="#blockchain">Blockchain</a><a href="#network">Network</a><a href="#wallet">Wallet</a><a href="#system">System</a><a href="#alerts">Alerts</a></nav>
+  <div class="toolbar"><button id="refresh" type="button">Refresh</button><span class="muted">History:</span><div id="time-filters" role="group" aria-label="History range"></div><span id="connection" class="connection ok">API connected</span></div>
+  <div id="updated" class="muted" style="margin-bottom:16px">Updated {{ snapshot.updated_at }}</div>
+  <div id="user-overview" class="user-overview" aria-label="Staking overview"></div>
+  <div id="user-status" class="user-status"></div>
+  <div id="dashboard-content" class="grid"></div>
+  <div id="intelligence-content" class="grid" aria-live="polite">
+    <section id="staking-intelligence" class="full"><h2>Staking Intelligence</h2><div class="muted">Loading historical data…</div></section>
+  </div>
+</main>
+<script>
+  const initialSnapshot = {{ snapshot | tojson }};
+  const content = document.getElementById('dashboard-content');
+  const updated = document.getElementById('updated');
+  const connection = document.getElementById('connection');
+  const refresh = document.getElementById('refresh');
+  const timeFilters = document.getElementById('time-filters');
+  const userOverview = document.getElementById('user-overview');
+  const userStatus = document.getElementById('user-status');
+  let selectedPeriod = '24h';
+  let currentSnapshot = initialSnapshot;
+  const label = value => String(value).replaceAll('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
+  function display(value, key = '') {
+    if (value === null || value === undefined || value === '') return 'N/A';
+    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+    if (typeof value === 'number' && /bytes|memory|disk|space/i.test(key)) {
+      const units = ['B','KB','MB','GB','TB']; let amount = value, unit = 0;
+      while (Math.abs(amount) >= 1024 && unit < units.length - 1) { amount /= 1024; unit++; }
+      return `${amount.toFixed(unit ? 1 : 0)} ${units[unit]}`;
+    }
+    if (typeof value === 'number' && /percent|progress/i.test(key)) return `${(value <= 1 && /progress/i.test(key) ? value * 100 : value).toFixed(1)}%`;
+    if (typeof value === 'number' && /seconds|uptime/i.test(key)) return `${value.toLocaleString()} s`;
+    return String(value);
+  }
+  const text = (value, fallback = 'N/A') => value === null || value === undefined || value === '' ? fallback : String(value);
+  const percent = value => value === null || value === undefined ? 'N/A' : `${Number(value).toFixed(2)}%`;
+  const progress = value => value === null || value === undefined ? 'N/A' : `${(value <= 1 ? value * 100 : value).toFixed(1)}%`;
+  const bytes = value => { if (value === null || value === undefined) return 'N/A'; const units=['B','KB','MB','GB','TB']; let n=value,u=0; while(n>=1024&&u<units.length-1){n/=1024;u++;} return `${n.toFixed(u?1:0)} ${units[u]}`; };
+  const seconds = value => { if (value === null || value === undefined) return 'N/A'; const d=Math.floor(value/86400), h=Math.floor(value%86400/3600), m=Math.floor(value%3600/60); return `${d}d ${h}h ${m}m`; };
+  const ghost = value => { if(value===null||value===undefined||value==='') return 'N/A'; const n=Number(value); if(!Number.isFinite(n)) return 'N/A'; return `${n.toLocaleString('pl-PL',{minimumFractionDigits:0,maximumFractionDigits:8})} GHOST`; };
+  const expected = value => { if(value===null||value===undefined||!Number.isFinite(Number(value))) return 'N/A'; const n=Number(value); return `${(n/86400).toFixed(1)} days (${seconds(n)})`; };
+  const atomicGhost = value => { if(value===null||value===undefined) return 'N/A'; const n=Number(value); return Number.isFinite(n) ? ghost(n/100000000) : 'N/A'; };
+  const localDate = value => { if(!value) return 'N/A'; const parts=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Warsaw',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(new Date(value)); const p=Object.fromEntries(parts.map(x=>[x.type,x.value])); return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}:${p.second}`; };
+  function renderUserOverview(snapshot) {
+    const d=snapshot.data||{}, wallet=d.wallet?.data||{}, mine=wallet.balances?.mine||{}, stake=d.staking?.data||{}, intel=stake.intelligence||{}, overviewState=window.intelligenceOverview||{};
+    const rewards=overviewState.rewards||{};
+    const stakingStatus=stake.staking==null?'N/A':stake.staking?'Active':'Inactive';
+    const cards=[['Wallet Balance',ghost(mine.trusted ?? wallet.balance),'Total wallet balance; not all funds must stake.'],['Active Staking Weight',atomicGhost(stake.wallet_weight),'Wallet weight currently participating in staking.'],['Network Share',percent(intel.wallet_share_percent),'Wallet weight as a percentage of network stake weight.'],['Confirmed Rewards',atomicGhost(rewards.confirmed),'Matured wallet rewards only.'],['Expected Block Time',stake.expected_time==null?'N/A':`${seconds(stake.expected_time)} (estimate)`,'Statistical estimate, not a guarantee.']];
+    userOverview.replaceChildren(); cards.forEach(([title,value,help])=>{const card=document.createElement('article');card.className='user-card';const h=document.createElement('h2');h.textContent=title;const v=document.createElement('div');v.className='user-value';v.textContent=value;const p=document.createElement('div');p.className='user-help';p.textContent=help;card.append(h,v,p);userOverview.appendChild(card);});
+    userStatus.textContent=`Node: ${text(d.service?.data?.activeState)} · Collector: ${text(overviewState.collector_status||'Historical status available below')} · Updated: ${localDate(snapshot.updated_at)}`;
+  }
+  function rows(dl, entries) { entries.forEach(([key, value]) => { const dt=document.createElement('dt'), dd=document.createElement('dd'); dt.textContent=key; dd.textContent=value; dl.append(dt,dd); }); }
+  function section(title, status, entries, className='wide') { const el=document.createElement('section'); el.id=title.toLowerCase().replaceAll(' ','-'); el.className=className; const h=document.createElement('h2'); h.textContent=title+' '; const b=document.createElement('span'); b.className=`badge ${status||'UNKNOWN'}`; b.textContent=status||'N/A'; h.appendChild(b); el.appendChild(h); const dl=document.createElement('dl'); rows(dl,entries); el.appendChild(dl); return el; }
+  function peerDetails(peers) { const details=document.createElement('details'); details.className='peer-details'; const summary=document.createElement('summary'); summary.textContent=`Peer Details (${peers.length})`; details.appendChild(summary); const wrap=document.createElement('div'); wrap.className='table-wrap'; const table=document.createElement('table'); table.innerHTML='<thead><tr><th>Type</th><th>Direction</th><th>Ping</th><th>Client</th><th>Protocol</th></tr></thead>'; const body=document.createElement('tbody'); peers.forEach(peer=>{ const tr=document.createElement('tr'); [text(peer.connection_type), peer.inbound===true?'Inbound':peer.inbound===false?'Outbound':'N/A', peer.ping_time_ms==null?'N/A':`${peer.ping_time_ms} ms`, text(peer.subversion), text(peer.protocol_version)].forEach(v=>{const td=document.createElement('td');td.textContent=v;tr.appendChild(td);}); body.appendChild(tr); }); table.appendChild(body); wrap.appendChild(table); details.appendChild(wrap); return details; }
+  function render(snapshot) {
+    currentSnapshot = snapshot;
+    content.replaceChildren();
+    renderUserOverview(snapshot);
+    const d=snapshot.data||{}, core=d.status?.data||{}, chain=core.blockchain||{}, net=core.network||{}, system=d.system?.data||{}, service=d.service?.data||{}, wallet=d.wallet?.data||{}, network=d.network?.data||{};
+    content.append(section('Blockchain',d.status?.status,[['Block height',chain.blocks==null?'N/A':Number(chain.blocks).toLocaleString()],['Headers',chain.headers==null?'N/A':Number(chain.headers).toLocaleString()],['Sync progress',progress(chain.verification_progress)],['Initial block download',chain.initial_block_download==null?'N/A':chain.initial_block_download?'Yes':'No'],['Ghost Core version',text(net.version)]],'wide'));
+    const ping=network.ping_summary||{}; const protocols=Array.isArray(network.protocol_versions)?network.protocol_versions.join(', '):'N/A';
+    content.append(section('Network',d.network?.status,[['Total peers',text(network.connections?.total)],['Inbound',text(network.connections?.inbound)],['Outbound',text(network.connections?.outbound)],['Ping min / avg / max',`${text(ping.min_ms)} / ${text(ping.avg_ms)} / ${text(ping.max_ms)} ms`],['Protocol version',protocols]],'wide'));
+    content.append(section('System',d.system?.status,[['CPU',percent(system.cpu?.usage_percent)],['RAM used / total',`${bytes(system.memory?.used?.bytes)} / ${bytes(system.memory?.total?.bytes)} (${percent(system.memory?.usage_percent)})`],['SWAP used / total',`${bytes(system.swap?.used?.bytes)} / ${bytes(system.swap?.total?.bytes)} (${percent(system.swap?.usage_percent)})`],['Disk used / total',`${bytes(system.disk?.used?.bytes)} / ${bytes(system.disk?.total?.bytes)} (${percent(system.disk?.usage_percent)})`],['Uptime',seconds(system.uptime?.seconds)],['Hostname',text(system.hostname)]],'wide'));
+    content.append(section('Service',d.service?.status,[['Service',text(service.service)],['Active',text(service.activeState)],['Substate',text(service.subState)]],'compact'));
+    const stake=d.staking?.data||{}, intelligence=stake.intelligence||{}; const stakingStatus=stake.staking==null?'N/A':stake.staking?'Active':'Inactive'; const mine=wallet.balances?.mine||{}; const balanceRows=[['Name',text(wallet.wallet_name)],['Loaded',wallet.loaded==null?'N/A':wallet.loaded?'Yes':'NOT LOADED'],['Trusted plain',mine.trusted==null?(wallet.balance==null?'N/A':`${wallet.balance} GHOST`):`${mine.trusted} GHOST`],['Blind trusted',text(mine.blind_trusted)],['Anon trusted',text(mine.anon_trusted)],['Unconfirmed',text(mine.untrusted_pending)],['Immature',text(mine.immature)],['RPC Staked Balance',text(mine.staked)],['Staking Status',stakingStatus],['Active Staking Weight',atomicGhost(stake.wallet_weight)],['Minimum Stake Depth',text(stake.minstakeabledepth)],['Encryption',text(wallet.encryption)]];
+    content.append(section('Wallet',d.wallet?.status,balanceRows,'wide'));
+    content.append(section('Staking',d.staking?.status,[['Enabled',stake.enabled==null?'N/A':stake.enabled?'Yes':'No'],['Staking',stakingStatus],['Cause',text(stake.cause_description||stake.cause)],['Active staking weight',atomicGhost(stake.wallet_weight)],['Network weight',atomicGhost(stake.network_weight)],['Minimum stake depth',text(stake.minstakeabledepth)],['Expected time',expected(stake.expected_time)+' (estimate)'],['Difficulty',stake.difficulty==null?'N/A':Number(stake.difficulty).toLocaleString('pl-PL',{maximumFractionDigits:4})],['Year reward rate',stake.percent_year_reward==null?'N/A':`${stake.percent_year_reward}% (not guaranteed APY)`]],'wide'));
+    content.append(section('Staking Intelligence',d.staking?.status,[['Wallet share',percent(intelligence.wallet_share_percent)],['Chance in 24 hours',percent(intelligence.probability_24h_percent)],['Chance in 7 days',percent(intelligence.probability_7d_percent)],['Chance in 30 days',percent(intelligence.probability_30d_percent)],['History',intelligence.historical_data_available?'Available':'N/A'],['Method',intelligence.probability_24h_percent==null?'N/A':'Statistical estimate; not guaranteed']], 'wide'));
+    if(Array.isArray(network.peers)) { const peerSection=section('Network peers',d.network?.status,[['Peer count',text(network.peer_count)]],'full'); peerSection.appendChild(peerDetails(network.peers)); content.append(peerSection); }
+    const alerts=snapshot.alerts||[]; const alertSection=section('Alerts',alerts.length?'WARN':'OK',alerts.length?alerts.map(a=>[`${a.source} (${a.status})`,a.message]):[['State','No active diagnostic alerts']],'full'); content.append(alertSection);
+    updated.textContent = `Updated ${localDate(snapshot.updated_at)}`;
+    connection.textContent = 'API connected'; connection.className = 'connection ok';
+  }
+  function intelligenceSection(id, title, status, entries, className='wide') {
+    const el=document.createElement('section'); el.id=id; el.className=className; const h=document.createElement('h2'); h.textContent=title+' '; const b=document.createElement('span'); b.className=`badge ${status||'UNKNOWN'}`; b.textContent=status||'N/A'; h.appendChild(b); el.appendChild(h); const dl=document.createElement('dl'); rows(dl, entries); el.appendChild(dl); return el;
+  }
+  function chart(title, points) {
+    const wrap=document.createElement('div'); wrap.className='chart'; const h=document.createElement('h3'); h.textContent=title; wrap.appendChild(h);
+    if(!Array.isArray(points)||!points.length){ const empty=document.createElement('div'); empty.className='empty'; empty.textContent='N/A — no data'; wrap.appendChild(empty); return wrap; }
+    const values=points.map(p=>Number(p.value ?? p.value_atomic)).filter(Number.isFinite); if(!values.length){ const empty=document.createElement('div'); empty.className='empty'; empty.textContent='N/A — no data'; wrap.appendChild(empty); return wrap; }
+    const svg=document.createElementNS('http://www.w3.org/2000/svg','svg'); svg.setAttribute('viewBox','0 0 400 90'); const min=Math.min(...values), max=Math.max(...values), span=max-min||1; const path=document.createElementNS('http://www.w3.org/2000/svg','path'); path.setAttribute('d',values.map((v,i)=>`${i?'L':'M'} ${(i/(Math.max(values.length-1,1))*390)+5} ${84-((v-min)/span*74)}`).join(' ')); svg.appendChild(path); wrap.appendChild(svg); return wrap;
+  }
+  function intelligenceTable(title, records, columns) {
+    const el=document.createElement('section'); el.className='full'; const h=document.createElement('h2'); h.textContent=title; el.appendChild(h); const wrap=document.createElement('div'); wrap.className='table-wrap intelligence-table'; const table=document.createElement('table'); const head=document.createElement('thead'); const tr=document.createElement('tr'); columns.forEach(c=>{const th=document.createElement('th');th.textContent=c.label;tr.appendChild(th);}); head.appendChild(tr); table.appendChild(head); const body=document.createElement('tbody'); (records||[]).forEach(row=>{const tr=document.createElement('tr');columns.forEach(c=>{const td=document.createElement('td');td.textContent=c.render?c.render(row):text(row[c.key]);if(c.titleKey&&row[c.titleKey])td.title=String(row[c.titleKey]);tr.appendChild(td);});body.appendChild(tr);}); table.appendChild(body); wrap.appendChild(table); el.appendChild(wrap); return el;
+  }
+  function buildTimeFilters() { timeFilters.replaceChildren(); ['24h','7d','30d','90d','ALL'].forEach(period => { const button=document.createElement('button'); button.type='button'; button.textContent=period; button.dataset.period=period; button.setAttribute('aria-pressed', period===selectedPeriod ? 'true':'false'); button.addEventListener('click', async () => { selectedPeriod=period; buildTimeFilters(); await loadIntelligence(); }); timeFilters.appendChild(button); }); }
+  async function loadIntelligence() {
+    const target=document.getElementById('intelligence-content');
+    try {
+      const [overview, performance, rewards, blocks, health] = await Promise.all([
+        fetch('/api/intelligence/overview',{cache:'no-store'}).then(r=>r.json()),
+        fetch(`/api/intelligence/performance?period=${encodeURIComponent(selectedPeriod)}&limit=200`,{cache:'no-store'}).then(r=>r.json()),
+        fetch('/api/intelligence/rewards?limit=20',{cache:'no-store'}).then(r=>r.json()),
+        fetch('/api/intelligence/blocks?active=true&limit=20',{cache:'no-store'}).then(r=>r.json()),
+        fetch('/api/intelligence/collector',{cache:'no-store'}).then(r=>r.json())
+      ]);
+      target.replaceChildren(); const o=overview.data||{}, r=o.rewards||{}, b=o.blocks||{}; window.intelligenceOverview={...o,collector_status:health.status}; renderUserOverview(currentSnapshot);
+      target.append(intelligenceSection('staking-intelligence','Staking Intelligence',overview.status,[['Last snapshot',text(o.last_snapshot)],['Status',text(overview.status)],['Wallet weight',text(o.staking?.wallet_weight)],['Network weight',text(o.staking?.network_weight)],['Difficulty',text(o.staking?.difficulty)],['Expected time',text(o.staking?.expected_time_seconds)]],'wide'));
+      const rewardMessage = rewards.data?.length ? `Records: ${rewards.data.length}` : 'No staking rewards recorded yet. Waiting for the first confirmed Coinstake.';
+      target.append(intelligenceSection('rewards-intelligence','Rewards Intelligence',overview.status,[['Confirmed',text(r.confirmed)],['Pending',text(r.pending)],['Orphaned',text(r.orphaned)],['Spent',text(r.spent)],['Unverified',text(r.unverified)],['State',rewardMessage]],'wide'));
+      const baseline = o.chain_state;
+      const txc=blocks.tx_completeness||{}; const blockEntries = [['Status', baseline ? 'BASELINE ESTABLISHED' : 'NOT STARTED'],['Initial height',text(baseline?.tip_height)],['Initial hash',text(baseline?.tip_hash)],['History','Historical blockchain was not scanned'],['Monitoring',baseline?'Block monitoring starts after baseline':'Waiting for baseline']].concat(b.observed_blocks ? [['Observed',text(b.observed_blocks)],['Active chain',text(b.active_chain_blocks)],['Orphaned',text(b.orphaned_blocks)],['PoS',text(b.pos_blocks)],['Wallet staking blocks',text(b.wallet_stake_blocks)],['Reorganizations',text(b.reorg_count)],['Records loaded',String(blocks.data?.length||0)]] : []).concat([['TX completeness',txc.percent==null?'N/A':`${txc.percent}%`],['Active blocks with TX count',text(txc.complete_blocks)],['Active blocks missing TX count',text(txc.incomplete_blocks)],['TX meaning','Block transactions, including technical and staking transactions; not transfers only']]);
+      target.append(intelligenceSection('chain-monitoring','Chain Monitoring',overview.status,blockEntries,'wide'));
+      const healthStatus = health.data?.last_run?.status === 'RUNNING' ? 'RUNNING' : (health.status||'NOT STARTED');
+      target.append(intelligenceSection('collector-health','Collector Health',healthStatus,[['Status',text(healthStatus)],['Last run',text(health.data?.last_run?.finished_at)],['Last successful run',text(health.data?.last_successful_run?.finished_at)],['Last scanned height',text(health.data?.chain_state?.last_scanned_height)],['Database',health.data?.database_bytes==null?'N/A':bytes(health.data.database_bytes)],['SQLite',text(health.data?.sqlite_integrity)],['Last error',text(health.data?.last_run?.error_message)]],'wide'));
+      target.append(intelligenceSection('performance-history','Staking Performance',performance.status,[['Analysis period',selectedPeriod],['Snapshots',String(performance.data?.length||0)],['Source','SQLite staking_snapshots'],['Missing data','Shown as N/A; no interpolation']],'wide'));
+      const charts=document.createElement('section'); charts.className='full'; const chartTitle=document.createElement('h2'); chartTitle.textContent='Historical Charts'; charts.appendChild(chartTitle); const grid=document.createElement('div'); grid.className='chart-grid'; const names=[['Network stake weight','network_weight'],['Difficulty','difficulty'],['Expected time','expected_time'],['Cumulative confirmed rewards','cumulative_confirmed_rewards']]; names.forEach(([title,key])=>grid.appendChild(chart(title,performance.series?.[key]))); charts.appendChild(grid); target.append(charts);
+      target.append(intelligenceTable('Reward History',rewards.data,[{label:'Created',key:'created_at'},{label:'Lifecycle',key:'status'},{label:'Completeness',key:'data_completeness'},{label:'Wallet reward',render:r=>atomicGhost(r.wallet_reward_atomic)},{label:'Block reward',render:r=>atomicGhost(r.block_reward_atomic)},{label:'Treasury',render:r=>atomicGhost(r.treasury_reward_atomic)},{label:'GVR',render:r=>atomicGhost(r.gvr_reward_atomic)},{label:'Source',key:'source_rpc'}]));
+      target.append(intelligenceTable('Chain Monitoring History',blocks.data,[{label:'Height',key:'height'},{label:'Time',key:'block_time_display'},{label:'Hash',key:'hash',titleKey:'hash'},{label:'Active',key:'active_label'},{label:'TX',key:'tx_count_display'},{label:'Coinstake',key:'coinstake_txid',titleKey:'coinstake_txid'}]));
+    } catch (_) { target.replaceChildren(intelligenceSection('staking-intelligence','Staking Intelligence','UNKNOWN',[['Status','Historical data unavailable']],'full')); }
+  }
+  async function refreshData() {
+    refresh.disabled = true; connection.textContent = 'Updating…'; connection.className = 'connection';
+    try { const response = await fetch('/api/status', {cache: 'no-store'}); if (!response.ok) throw new Error('API unavailable'); render(await response.json()); await loadIntelligence(); }
+    catch (error) { connection.textContent = 'API unavailable'; connection.className = 'connection error'; }
+    finally { refresh.disabled = false; }
+  }
+  buildTimeFilters(); refresh.addEventListener('click', refreshData); render(initialSnapshot); loadIntelligence(); setInterval(refreshData, 30000);
+</script>
+</body>
+</html>

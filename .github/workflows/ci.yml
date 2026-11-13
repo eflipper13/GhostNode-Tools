@@ -1,0 +1,23 @@
+name: isolated-tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install --require-hashes -r requirements.lock
+      - run: python -m pip install --no-build-isolation --no-deps -e .
+      - run: python -m pytest -q
+      - run: python -m compileall -q ghostnode scripts
+      - run: git diff --check
+      - name: reject local data artifacts
+        run: |
+          ! find . -type f \( -name '*.sqlite*' -o -name '*.db' -o -name '*.lock' -o -name '.env' \) -print -quit | grep .
