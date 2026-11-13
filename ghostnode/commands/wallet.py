@@ -58,6 +58,11 @@ def setup(as_json: bool, cli_path: str, datadir: str, wallet_name: str,
         click.echo(json.dumps(payload, indent=2, sort_keys=True))
         return
     click.echo(f"Wallet setup guidance status: {payload['status']}")
+    location = payload["wallet_location"]
+    click.echo(f"Wallet location: {location['status']}")
+    if location.get("path"):
+        click.echo(f"Local metadata path: {location['path']}")
+    click.echo(location["message"])
     for option in payload["options"]:
         click.echo(f"{option['name']}: {option['guidance']}")
     for item in payload["security"]:

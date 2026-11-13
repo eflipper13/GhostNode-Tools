@@ -19,3 +19,9 @@ or share authentication cookies. Never provide wallet seeds, private keys, or
 wallet unlock passphrases. Prefer local RPC access and restrictive filesystem
 permissions. GhostNode Tools' read-only behavior does not make unrestricted
 Ghost Core RPC credentials read-only.
+
+`ghostnode wallet status` and `ghostnode wallet setup` may display a local
+wallet path only when filesystem metadata identifies a supported location.
+Treat that output as local operator information. Remote RPC paths, ambiguous
+layouts, and unsupported wallet formats remain `WALLET_PATH_UNKNOWN`; the
+first-run report redacts local paths. The tool never opens wallet databases.
