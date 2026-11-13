@@ -12,3 +12,4 @@ class Config:
     rpc_port: int | None = (int(os.environ["GHOSTNODE_RPC_PORT"])
                             if os.environ.get("GHOSTNODE_RPC_PORT") else None)
     wallet_name: str = os.environ.get("GHOSTNODE_WALLET", "ghostmain")
+    wallet_dir: str | None = os.environ.get("GHOSTNODE_WALLET_DIR") or None

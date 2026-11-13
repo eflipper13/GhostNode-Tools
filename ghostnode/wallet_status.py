@@ -6,6 +6,7 @@ from typing import Any, Callable
 
 from ghostnode.collectors.rpc import _call
 from ghostnode.config import Config
+from ghostnode.wallet_location import detect_wallet_location
 
 WalletCall = Callable[[str, Config, str | None], tuple[Any, str | None]]
 
@@ -38,6 +39,7 @@ def wallet_status_report(config: Config, rpc_call: WalletCall | None = None) -> 
         "readiness": "WALLET_STATUS_UNKNOWN",
         "staking_monitoring": "UNKNOWN",
         "node_monitoring": "UNKNOWN",
+        "wallet_location": detect_wallet_location(config),
     }
     if error:
         return {"status": _error_status(error), "message": _safe_message(error), "data": base}

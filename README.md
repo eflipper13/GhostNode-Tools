@@ -74,6 +74,11 @@ It refreshes every 30 seconds
 and has a manual refresh control. Wallet and staking collection only uses
 read-only RPC calls; it never loads, unlocks or transacts with a wallet.
 
+Wallet setup guidance covers location uncertainty, encryption, passphrase
+security, offline backups, and recovery. It never copies or verifies wallet
+files and never claims `BACKUP_REPORTED_BY_USER` or `BACKUP_VERIFIED` without
+an external, explicitly verified process.
+
 Each refresh performs a bounded, synchronous read-only snapshot. The dashboard
 has no authentication. For remote use, keep the process bound to localhost and
 use an SSH tunnel or a separately hardened, authenticated proxy; do not change

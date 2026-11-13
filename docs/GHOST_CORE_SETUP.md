@@ -65,7 +65,10 @@ Check wallet readiness without changing wallet state:
 
 The report distinguishes `WALLET_NOT_LOADED`, `WALLET_READY`,
 `STAKING_MONITORING_READY`, `NODE_ONLY_READY`, and
-`WALLET_STATUS_UNKNOWN`. Node-only monitoring can remain ready when the
+`WALLET_STATUS_UNKNOWN`. It also reports a wallet path only when local
+filesystem metadata identifies one unambiguously; remote nodes and unknown or
+unsupported layouts report `WALLET_PATH_UNKNOWN`. The tool never opens a
+wallet database. Node-only monitoring can remain ready when the
 configured wallet is not loaded. A wallet RPC error is not treated as proof
 that a wallet is absent.
 
@@ -82,6 +85,13 @@ syntax is not verified by this project. Encrypt wallets and create and verify
 backups using Ghost Core's official procedures. Keep backups outside the
 application directory and never provide private keys, recovery phrases,
 passwords, cookies, or RPC credentials to GhostNode Tools.
+
+The setup report includes backup, encryption, passphrase, and recovery
+guidance. It does not copy or verify backups. `GUIDANCE_REVIEWED` means only
+that the instructions were displayed; `BACKUP_REPORTED_BY_USER` and
+`BACKUP_VERIFIED` are not claimed automatically. Keep passphrases separate
+from backups, and never overwrite an existing wallet during recovery. A lost
+encryption passphrase is not guaranteed recoverable.
 
 Keep the dashboard on `127.0.0.1` and use an SSH tunnel for authorized remote
 viewing. Never expose Ghost Core RPC directly to the public Internet.

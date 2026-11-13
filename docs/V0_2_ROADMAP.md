@@ -27,7 +27,10 @@ Implemented on the development branch:
   `getstakinginfo`.
 - `ghostnode wallet setup` provides guidance for a new wallet, an existing
   wallet, or node-only monitoring. It never creates, loads, unlocks, encrypts,
-  imports, or backs up a wallet.
+  imports, copies, verifies, restores, or backs up a wallet. It includes
+  passphrase, backup, and recovery guidance.
+- Wallet location is reported only when confirmed by local filesystem metadata;
+  remote and ambiguous locations remain `WALLET_PATH_UNKNOWN`.
 - The dashboard distinguishes wallet readiness from node health and does not
   add wallet-management actions.
 
