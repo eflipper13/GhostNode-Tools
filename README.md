@@ -33,6 +33,7 @@ GHOSTNODE_CLI_PATH=/path/to/ghost-cli GHOSTNODE_DATADIR=/path/to/datadir ./bin/g
 ./bin/ghostnode doctor --json
 ./bin/ghostnode wallet status --json
 ./bin/ghostnode wallet setup --json
+./bin/ghostnode init --json
 ```
 
 Alternatively:
@@ -78,6 +79,17 @@ Wallet setup guidance covers location uncertainty, encryption, passphrase
 security, offline backups, and recovery. It never copies or verifies wallet
 files and never claims `BACKUP_REPORTED_BY_USER` or `BACKUP_VERIFIED` without
 an external, explicitly verified process.
+
+The integrated first-run workflow combines these diagnostics without changing
+system state:
+
+```bash
+./bin/ghostnode init --json
+```
+
+It reports `NODE_ONLY`, `LOCAL_WALLET`, or `REMOTE_NODE` and keeps node health
+separate from wallet and staking readiness. Remote RPC does not imply that a
+local Ghost Core installation is missing.
 
 Each refresh performs a bounded, synchronous read-only snapshot. The dashboard
 has no authentication. For remote use, keep the process bound to localhost and

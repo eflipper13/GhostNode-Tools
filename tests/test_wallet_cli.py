@@ -27,3 +27,10 @@ def test_wallet_status_json_is_available():
     result = CliRunner().invoke(cli, ["wallet", "status", "--json"])
     assert result.exit_code in (0, 1)
     assert '"readiness"' in result.output
+
+
+def test_init_json_command_is_available():
+    result = CliRunner().invoke(cli, ["init", "--json", "--datadir", "/tmp/nonexistent-ghostnode-init"])
+    assert result.exit_code in (0, 1)
+    assert '"mode"' in result.output
+    assert '"stages"' in result.output

@@ -9,6 +9,7 @@ from ghostnode.commands.collector import collector
 from ghostnode.commands.doctor import doctor
 from ghostnode.commands.setup import setup
 from ghostnode.commands.wallet import wallet
+from ghostnode.commands.init import init
 
 
 @click.group()
@@ -25,3 +26,4 @@ cli.add_command(collector)
 cli.add_command(doctor)
 cli.add_command(setup)
 cli.add_command(wallet)
+cli.add_command(init)

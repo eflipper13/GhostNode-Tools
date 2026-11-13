@@ -39,6 +39,18 @@ passwords, cookies, or RPC credentials. A missing wallet is not inferred from
 an arbitrary RPC error; unsupported or failed wallet RPC is reported as
 `WALLET_STATUS_UNKNOWN`.
 
+## M3 — implemented on the development branch
+
+- `ghostnode init` and `ghostnode init --json` orchestrate the existing M1/M2
+  checks into a repeatable first-run workflow.
+- Operating modes are explicit: `NODE_ONLY`, `LOCAL_WALLET`, and
+  `REMOTE_NODE`.
+- The dashboard exposes a read-only first-run readiness summary without adding
+  wallet-management controls.
+- First-run output never claims installation, wallet creation, backup
+  verification, or staking activation unless those states are independently
+  verified by existing diagnostics.
+
 ## Compatibility and safety
 
 The M1 checks use the existing Ghost CLI RPC adapter and its read-only allowlist.

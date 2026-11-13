@@ -42,6 +42,7 @@ async def test_api_and_html_rendering(monkeypatch):
     assert "Staking Intelligence" in page.text
     assert "Alerts" in page.text
     assert "Dashboard" in page.text
+    assert "First-run readiness" in page.text
 
 
 @pytest.mark.anyio

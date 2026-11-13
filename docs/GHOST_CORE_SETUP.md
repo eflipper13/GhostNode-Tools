@@ -55,6 +55,24 @@ verified from official sources by the operator before any separate installation
 work. When that verification is not available, setup reports the limitation
 instead of generating an executable installation command.
 
+## First-run workflow
+
+Run the integrated, read-only first-run check:
+
+```bash
+./bin/ghostnode init --json
+```
+
+The workflow combines environment detection, RPC/network checks, wallet
+readiness, security guidance, staking readiness, and dashboard readiness. It
+reports one operating mode: `NODE_ONLY`, `LOCAL_WALLET`, or `REMOTE_NODE`.
+Remote RPC is not treated as a missing local Ghost Core installation.
+
+`init` never installs software, writes RPC configuration, creates or loads a
+wallet, changes wallet state, creates or verifies backups, manages services, or
+writes files. It may report `GUIDANCE_REVIEWED`, but never claims
+`BACKUP_REPORTED_BY_USER` or `BACKUP_VERIFIED` automatically.
+
 ## Wallet readiness and setup guidance
 
 Check wallet readiness without changing wallet state:

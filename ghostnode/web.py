@@ -30,6 +30,35 @@ def _overall(*results: Result) -> Status:
     return Status.OK
 
 
+def _dashboard_first_run(config: Config, wallet_result: Result,
+                         staking_result: Result, rpc_result: Result) -> dict:
+    readiness = wallet_result.data.get("readiness", "WALLET_STATUS_UNKNOWN")
+    if config.rpc_host:
+        mode = "REMOTE_NODE"
+    elif readiness == "WALLET_READY":
+        mode = "LOCAL_WALLET"
+    else:
+        mode = "NODE_ONLY"
+    if rpc_result.status == Status.ERROR:
+        status = "ERROR"
+    elif wallet_result.status in {Status.UNKNOWN, Status.WARN} or staking_result.status in {Status.UNKNOWN, Status.WARN}:
+        status = "WARN"
+    else:
+        status = "OK"
+    return {
+        "status": status,
+        "mode": mode,
+        "wallet_readiness": readiness,
+        "staking_monitoring": (
+            "STAKING_MONITORING_READY" if staking_result.status == Status.OK and wallet_result.data.get("loaded")
+            else "NODE_ONLY_READY" if wallet_result.data.get("loaded") is False else "UNKNOWN"
+        ),
+        "backup_status": "GUIDANCE_REVIEWED",
+        "dashboard_bind": "127.0.0.1",
+        "read_only": True,
+    }
+
+
 def collect_dashboard(config: Config) -> dict:
     """Collect a dashboard snapshot without depending on HTTP or Click."""
     wallet_result = collect_wallet(config)
@@ -41,6 +70,7 @@ def collect_dashboard(config: Config) -> dict:
         "wallet": wallet_result,
         "staking": collect_staking(config, bool(wallet_result.data.get("loaded"))),
     }
+    first_run = _dashboard_first_run(config, wallet_result, results["staking"], results["status"])
     if wallet_result.data.get("loaded") is True:
         wallet_result.data["monitoring_mode"] = (
             "STAKING_MONITORING_READY" if results["staking"].status == Status.OK else "WALLET_READY"
@@ -58,7 +88,8 @@ def collect_dashboard(config: Config) -> dict:
     return {
         "status": _overall(*results.values()).value,
         "updated_at": datetime.now(timezone.utc).isoformat(),
-        "data": {name: result.as_dict() for name, result in results.items()},
+        "data": {**{name: result.as_dict() for name, result in results.items()},
+                 "first_run": first_run},
         "alerts": alerts,
     }
 
