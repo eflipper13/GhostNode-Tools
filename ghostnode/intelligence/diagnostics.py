@@ -14,4 +14,8 @@ def sanitize_error(error: Any) -> str:
     text = re.sub(r"(?i)(/[^\s]*(?:\.ghost|wallet\.dat|\.cookie)[^\s]*)",
                   "[REDACTED_PATH]", text)
     text = re.sub(r"(?i)(bearer\s+)[^\s]+", r"\1[REDACTED]", text)
+    # Redact standalone identifiers and common Ghost address-shaped values
+    # that may appear in CLI stderr while retaining the error context.
+    text = re.sub(r"\b[0-9a-fA-F]{64}\b", "[REDACTED_ID]", text)
+    text = re.sub(r"\bG[A-Za-z0-9]{20,}\b", "[REDACTED_ADDRESS]", text)
     return " ".join(text.split())[:300] or "unspecified error"

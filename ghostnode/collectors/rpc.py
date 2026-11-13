@@ -7,6 +7,7 @@ import subprocess
 from typing import Any
 
 from ghostnode.config import Config
+from ghostnode.intelligence.diagnostics import sanitize_error
 from ghostnode.models.results import Result, Status
 
 _ALLOWED_METHODS = {"getblockchaininfo", "getnetworkinfo", "getpeerinfo", "listwallets", "getwalletinfo", "getbalances", "getstakinginfo", "getposdifficulty", "getblockhash", "getblock", "getblockreward", "listtransactions", "listunspent", "getrawtransaction", "gettxout", "getaddressinfo"}
@@ -83,9 +84,7 @@ def _validate_args(method: str, args: list[Any] | None) -> str | None:
 
 def _safe_stderr(value: str) -> str:
     """Keep diagnostics useful without exposing RPC credentials or large output."""
-    text = re.sub(r"(?i)(rpc(?:user|password)|password|cookie|token)\s*[=:]\s*[^\s]+", r"\1=[REDACTED]", value)
-    text = re.sub(r"(?i)(-rpc(?:user|password)=)[^\s]+", r"\1[REDACTED]", text)
-    return " ".join(text.split())[:300]
+    return sanitize_error(value)
 
 
 def _resolve_cli_path(config: Config) -> str | None:

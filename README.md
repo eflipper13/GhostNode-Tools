@@ -56,11 +56,11 @@ python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install --require-hashes -r requirements.lock
 python -m pip install --no-build-isolation --no-deps -e .
-./bin/ghostnode web --port 44678
+./bin/ghostnode web --host 127.0.0.1 --port 44678
 ```
 
-The dashboard is read-only, uses port `44678`, and binds to `127.0.0.1` by
-default. It
+The dashboard is read-only, uses port `44678`, and is strictly localhost-only:
+the launcher rejects `0.0.0.0`, LAN addresses, and public addresses. It
 exposes `/` and `/api/status`; it has no wallet or command-execution endpoints.
 
 The dashboard groups diagnostics into Blockchain, Network, System, Service,
@@ -69,8 +69,9 @@ and has a manual refresh control. Wallet and staking collection only uses
 read-only RPC calls; it never loads, unlocks or transacts with a wallet.
 
 Each refresh performs a bounded, synchronous read-only snapshot. The dashboard
-has no authentication; do not expose it to a network without an authenticated
-reverse proxy and explicit access control.
+has no authentication. For remote use, keep the process bound to localhost and
+use an SSH tunnel or a separately hardened, authenticated proxy; do not change
+the bind address to expose it directly.
 There is no persistent cache yet, so avoid opening many dashboard clients at
 once on a constrained node.
 

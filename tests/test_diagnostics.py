@@ -10,4 +10,11 @@ def test_sanitize_error_removes_credentials_cookie_token_and_sensitive_path():
     assert "wallet.dat" not in safe
     assert "tx-secret" not in safe
     assert "Gsecret" not in safe
+
+
+def test_sanitize_error_redacts_standalone_ids_and_addresses():
+    safe = sanitize_error("failure " + "a" * 64 + " G" + "A" * 30)
+    assert "a" * 64 not in safe
+    assert "G" + "A" * 30 not in safe
+    assert "failure" in safe
     assert "REDACTED" in safe

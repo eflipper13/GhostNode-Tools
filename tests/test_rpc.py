@@ -238,3 +238,15 @@ def test_listunspent_rejects_invalid_arguments_without_subprocess(monkeypatch):
     monkeypatch.setattr(rpc.subprocess, "run", fake_run)
     value, error = rpc._call("listunspent", Config(cli_path="ghost-cli"), args=[0, "many"])
     assert value is None and error and called is False
+
+
+def test_rpc_stderr_is_sanitized_without_losing_error_context():
+    txid = "a" * 64
+    address = "G" + "A" * 30
+    raw = f"RPC error txid={txid} address={address} rpcpassword=secret wallet=/tmp/node/.ghost/wallet.dat"
+    safe = rpc._safe_stderr(raw)
+    assert txid not in safe
+    assert address not in safe
+    assert "secret" not in safe
+    assert "[REDACTED" in safe
+    assert "RPC error" in safe
