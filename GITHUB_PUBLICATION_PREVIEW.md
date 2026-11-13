@@ -13,6 +13,9 @@ Visibility: public (planned only; not configured here).
 
 License: MIT
 
+Release assets: `GhostNode-Tools-v0.1.0.tar.gz` and
+`GhostNode-Tools-v0.1.0.tar.gz.sha256`
+
 Topics: `ghost`, `ghost-core`, `blockchain`, `node-monitoring`, `staking`,
 `python`, `open-source`
 

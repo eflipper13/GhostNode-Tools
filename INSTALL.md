@@ -17,9 +17,9 @@ Do not copy a production `.cookie`, `ghost.conf`, wallet file, SQLite database,
 or secret into the release tree.
 
 ```bash
-sha256sum -c GhostNode-V5-RC2.tar.gz.sha256
+sha256sum -c GhostNode-Tools-v0.1.0.tar.gz.sha256
 mkdir -p "$HOME/ghostnode-tools"
-tar -xzf GhostNode-V5-RC2.tar.gz -C "$HOME/ghostnode-tools" --strip-components=1
+tar -xzf GhostNode-Tools-v0.1.0.tar.gz -C "$HOME/ghostnode-tools" --strip-components=1
 cd "$HOME/ghostnode-tools"
 python3.11 -m venv .venv
 . .venv/bin/activate
@@ -32,6 +32,10 @@ python -m pytest -q
 The checksum file must come from the same trusted release channel as the
 archive. Do not invent or skip hashes. No command above uses `sudo` or changes
 system-wide Python packages.
+
+The public release assets are `GhostNode-Tools-v0.1.0.tar.gz` and the separate
+`GhostNode-Tools-v0.1.0.tar.gz.sha256` checksum file. The checksum file is not
+embedded in the archive and must be kept beside it when running `sha256sum -c`.
 
 ## Local configuration
 
