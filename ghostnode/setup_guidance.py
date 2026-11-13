@@ -31,6 +31,30 @@ def setup_report(config: Config) -> dict[str, Any]:
         ],
         "limitations": [
             "Official distribution URLs, checksums, and signatures were not verified by this dry-run.",
-            "Wallet creation, loading, unlocking, and backup guidance are deferred to M2.",
+            "Wallet creation, loading, unlocking, and backup operations remain outside this dry-run.",
+        ],
+    }
+
+
+def wallet_setup_report() -> dict[str, Any]:
+    """Return English-only, non-operational wallet setup guidance."""
+    return {
+        "status": "PASS",
+        "mode": "guidance_only",
+        "options": [
+            {"name": "Create a new wallet", "guidance": "Use Ghost Core's verified official wallet documentation and CLI on the node; GhostNode Tools does not generate, load, encrypt, or back up wallets."},
+            {"name": "Use an existing wallet", "guidance": "Load and verify it using Ghost Core's own documented procedures, then run ghostnode wallet status. Never paste credentials into GhostNode Tools."},
+            {"name": "Continue without a wallet", "guidance": "Node-only monitoring remains supported; wallet rewards and wallet-specific staking readiness will be unavailable."},
+        ],
+        "security": [
+            "Encrypt wallets using Ghost Core's official procedure before holding funds.",
+            "Create and verify secure backups outside the application directory; never copy active wallet files into this repository.",
+            "Keep recovery credentials offline and plan recovery before relying on the wallet.",
+            "Never disclose private keys, recovery phrases, wallet passwords, cookies, or RPC credentials.",
+            "Local RPC is preferable; remote RPC must be protected and must not be exposed publicly.",
+        ],
+        "limitations": [
+            "No wallet-changing RPC command is generated or executed.",
+            "Ghost Core wallet-creation command syntax was not asserted because it was not verified from an official source in this repository.",
         ],
     }

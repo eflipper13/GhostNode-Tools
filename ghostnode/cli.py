@@ -8,6 +8,7 @@ from ghostnode.commands.web import web
 from ghostnode.commands.collector import collector
 from ghostnode.commands.doctor import doctor
 from ghostnode.commands.setup import setup
+from ghostnode.commands.wallet import wallet
 
 
 @click.group()
@@ -23,3 +24,4 @@ cli.add_command(web)
 cli.add_command(collector)
 cli.add_command(doctor)
 cli.add_command(setup)
+cli.add_command(wallet)

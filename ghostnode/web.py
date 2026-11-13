@@ -41,6 +41,14 @@ def collect_dashboard(config: Config) -> dict:
         "wallet": wallet_result,
         "staking": collect_staking(config, bool(wallet_result.data.get("loaded"))),
     }
+    if wallet_result.data.get("loaded") is True:
+        wallet_result.data["monitoring_mode"] = (
+            "STAKING_MONITORING_READY" if results["staking"].status == Status.OK else "WALLET_READY"
+        )
+    elif wallet_result.data.get("loaded") is False:
+        wallet_result.data["monitoring_mode"] = "NODE_ONLY_READY"
+    else:
+        wallet_result.data["monitoring_mode"] = "UNKNOWN"
     alerts = []
     for name, result in results.items():
         if result.status in {Status.ERROR, Status.UNKNOWN, Status.WARN}:

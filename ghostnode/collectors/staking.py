@@ -41,7 +41,7 @@ def collect_staking(config: Config, loaded: bool) -> Result:
         data["difficulty"] = _number(public.get("difficulty"))
     if not loaded:
         return Result(Status.WARN if public_error is None else Status.UNKNOWN, data, "Wallet is NOT LOADED")
-    info, info_error = _call("getstakinginfo", config, wallet="ghostmain")
+    info, info_error = _call("getstakinginfo", config, wallet=config.wallet_name)
     if isinstance(info, dict):
         data.update({
             "enabled": info.get("enabled"),

@@ -11,6 +11,8 @@ def healthy_rpc(**overrides):
                               "initialblockdownload": False},
         "getnetworkinfo": {"version": 23010000, "connections": 3},
         "getstakinginfo": {"enabled": True},
+        "listwallets": ["ghostmain"],
+        "getwalletinfo": {"walletname": "ghostmain", "unlocked_until": 0},
     }
     responses.update(overrides)
     return lambda method, config: (responses[method], None)
@@ -68,6 +70,23 @@ def test_doctor_allows_remote_rpc_when_local_cli_is_missing(tmp_path):
     assert next(check for check in checks if check.name == "rpc").status == "PASS"
 
 
+def test_doctor_reports_wallet_not_loaded_as_node_only_ready(tmp_path):
+    rpc = healthy_rpc(listwallets=["other"])
+    checks = GhostCoreDoctor(local_config(tmp_path), rpc_call=rpc).run()
+    wallet = next(check for check in checks if check.name == "wallet")
+    assert wallet.status == "WARN"
+    assert wallet.details["readiness"] == "WALLET_NOT_LOADED"
+    assert wallet.details["node_monitoring"] == "NODE_ONLY_READY"
+
+
+def test_doctor_reports_wallet_and_staking_readiness(tmp_path):
+    checks = GhostCoreDoctor(local_config(tmp_path), rpc_call=healthy_rpc()).run()
+    wallet = next(check for check in checks if check.name == "wallet")
+    assert wallet.status == "PASS"
+    assert wallet.details["readiness"] == "WALLET_READY"
+    assert wallet.details["staking_monitoring"] == "STAKING_MONITORING_READY"
+
+
 def test_doctor_warns_for_unknown_version_and_unsynchronized_chain(tmp_path):
     rpc = healthy_rpc(getnetworkinfo={"subversion": "/GhostCore:9.9.9/"},
                       getblockchaininfo={"chain": "main", "blocks": 8, "headers": 10,
@@ -96,7 +115,9 @@ def test_doctor_repeated_runs_are_read_only(tmp_path):
     first = report_dict(doctor.run())
     second = report_dict(doctor.run())
     assert first == second
-    assert calls == ["getblockchaininfo", "getnetworkinfo", "getstakinginfo"]
+    assert calls == ["getblockchaininfo", "getnetworkinfo", "getstakinginfo",
+                     "listwallets", "getwalletinfo", "getstakinginfo",
+                     "listwallets", "getwalletinfo", "getstakinginfo"]
     assert not list((Path(tmp_path) / "ghost").iterdir())
 
 

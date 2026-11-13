@@ -16,8 +16,9 @@ unlocks wallets, or changes node configuration.
 
 No Ghost Core connection is required for M1.
 
-M2 adds read-only Ghost Core integration. The portable defaults are `ghost-cli`
-and `~/.ghost`; they can be overridden on every `status` invocation.
+M2 adds read-only Ghost Core and wallet readiness diagnostics. The portable
+defaults are `ghost-cli`, `~/.ghost`, and wallet `ghostmain`; they can be
+overridden with command options or environment variables.
 
 ## Usage
 
@@ -29,6 +30,9 @@ From this directory:
 ./bin/ghostnode system --json
 GHOSTNODE_CLI_PATH=/path/to/ghost-cli GHOSTNODE_DATADIR=/path/to/datadir ./bin/ghostnode status
 ./bin/ghostnode status --json
+./bin/ghostnode doctor --json
+./bin/ghostnode wallet status --json
+./bin/ghostnode wallet setup --json
 ```
 
 Alternatively:
@@ -64,7 +68,9 @@ the launcher rejects `0.0.0.0`, LAN addresses, and public addresses. It
 exposes `/` and `/api/status`; it has no wallet or command-execution endpoints.
 
 The dashboard groups diagnostics into Blockchain, Network, System, Service,
-Wallet, Staking Intelligence and Alerts. It refreshes every 30 seconds
+Wallet, Staking Intelligence and Alerts. Wallet readiness is read-only and is
+shown separately from node health; no wallet-management actions are exposed.
+It refreshes every 30 seconds
 and has a manual refresh control. Wallet and staking collection only uses
 read-only RPC calls; it never loads, unlocks or transacts with a wallet.
 

@@ -55,5 +55,33 @@ verified from official sources by the operator before any separate installation
 work. When that verification is not available, setup reports the limitation
 instead of generating an executable installation command.
 
+## Wallet readiness and setup guidance
+
+Check wallet readiness without changing wallet state:
+
+```bash
+./bin/ghostnode wallet status --json
+```
+
+The report distinguishes `WALLET_NOT_LOADED`, `WALLET_READY`,
+`STAKING_MONITORING_READY`, `NODE_ONLY_READY`, and
+`WALLET_STATUS_UNKNOWN`. Node-only monitoring can remain ready when the
+configured wallet is not loaded. A wallet RPC error is not treated as proof
+that a wallet is absent.
+
+For safe planning guidance:
+
+```bash
+./bin/ghostnode wallet setup --json
+```
+
+This command describes three supported modes: create a wallet using official
+Ghost Core procedures, use an existing wallet, or continue without a wallet.
+It does not generate a wallet command because the exact Ghost Core creation
+syntax is not verified by this project. Encrypt wallets and create and verify
+backups using Ghost Core's official procedures. Keep backups outside the
+application directory and never provide private keys, recovery phrases,
+passwords, cookies, or RPC credentials to GhostNode Tools.
+
 Keep the dashboard on `127.0.0.1` and use an SSH tunnel for authorized remote
 viewing. Never expose Ghost Core RPC directly to the public Internet.

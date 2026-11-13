@@ -1,9 +1,9 @@
 # GhostNode Tools v0.2.0 roadmap
 
 The v0.2.0 development line begins with M1: Ghost Core detection and a guided
-setup assistant. M1 is diagnostic and planning-only. It does not install Ghost
-Core, write configuration, change permissions, create services, or access a
-wallet.
+setup assistant. M1 and M2 are diagnostic and planning-only. They do not install
+Ghost Core, write configuration, change permissions, create services, or change
+wallet state.
 
 ## M1 status
 
@@ -18,13 +18,23 @@ Implemented on the development branch:
 - synthetic tests for RPC failures, authentication failures, unknown versions,
   wrong networks, synchronization lag, redaction, and repeated runs.
 
-## M2 — planned, not implemented
+## M2 — implemented on the development branch
 
-Ghost Wallet Detection & Guided Setup Assistant is deferred. It may eventually
-detect loaded wallets through approved read-only methods and explain wallet
-creation, encryption, backup, and recovery. It must never collect private keys,
-recovery phrases, or wallet passwords, and must never load, unlock, create, or
-modify wallets automatically.
+- `ghostnode doctor` now reports wallet functionality, loaded-wallet status,
+  node-only readiness, wallet readiness, and wallet-specific staking readiness.
+- `ghostnode wallet status` provides a compact JSON or human-readable readiness
+  report using only `listwallets`, `getwalletinfo`, and wallet-context
+  `getstakinginfo`.
+- `ghostnode wallet setup` provides guidance for a new wallet, an existing
+  wallet, or node-only monitoring. It never creates, loads, unlocks, encrypts,
+  imports, or backs up a wallet.
+- The dashboard distinguishes wallet readiness from node health and does not
+  add wallet-management actions.
+
+Wallet diagnostics never collect private keys, recovery phrases, wallet
+passwords, cookies, or RPC credentials. A missing wallet is not inferred from
+an arbitrary RPC error; unsupported or failed wallet RPC is reported as
+`WALLET_STATUS_UNKNOWN`.
 
 ## Compatibility and safety
 

@@ -4,14 +4,16 @@ from __future__ import annotations
 
 import platform
 import shutil
+import inspect
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
 from ghostnode.collectors.rpc import _call, _format_version
 from ghostnode.config import Config
+from ghostnode.wallet_status import wallet_status_report
 
-RpcCall = Callable[[str, Config], tuple[Any, str | None]]
+RpcCall = Callable[..., tuple[Any, str | None]]
 KNOWN_VERSIONS = {"0.23.1.0"}
 
 
@@ -56,18 +58,29 @@ class GhostCoreDoctor:
                  rpc_call: RpcCall | None = None) -> None:
         self.config = config
         self.expected_network = expected_network
-        self.rpc_call = rpc_call or (lambda method, cfg: _call(method, cfg))
+        self.rpc_call = rpc_call or (lambda method, cfg, wallet=None: _call(method, cfg, wallet=wallet))
         self._responses: dict[str, Any] = {}
         self._errors: dict[str, str | None] = {}
 
     def _get(self, method: str) -> Any:
         if method not in self._responses and method not in self._errors:
-            value, error = self.rpc_call(method, self.config)
+            value, error = self._invoke(method)
             if error:
                 self._errors[method] = error
             else:
                 self._responses[method] = value
         return self._responses.get(method)
+
+    def _invoke(self, method: str, wallet: str | None = None) -> tuple[Any, str | None]:
+        """Support existing two-argument test adapters and wallet-aware adapters."""
+        try:
+            parameters = inspect.signature(self.rpc_call).parameters.values()
+            accepts_wallet = any(parameter.kind == inspect.Parameter.VAR_POSITIONAL
+                                 for parameter in parameters) or len(parameters) >= 3
+        except (TypeError, ValueError):
+            accepts_wallet = True
+        return (self.rpc_call(method, self.config, wallet) if accepts_wallet
+                else self.rpc_call(method, self.config))
 
     def run(self) -> list[Check]:
         checks = [self._environment(), self._local_cli(), self._configuration()]
@@ -76,8 +89,28 @@ class GhostCoreDoctor:
         staking = self._get("getstakinginfo")
         checks.extend((self._rpc_status(), self._version(network), self._network(blockchain),
                        self._synchronization(blockchain), self._staking(staking),
-                       self._access(blockchain)))
+                       self._access(blockchain), self._wallet()))
         return checks
+
+    def _wallet(self) -> Check:
+        payload = wallet_status_report(
+            self.config,
+            rpc_call=lambda method, config, wallet=None: self._invoke(method, wallet),
+        )
+        data = payload.get("data", {})
+        readiness = data.get("readiness", "WALLET_STATUS_UNKNOWN")
+        if readiness == "WALLET_NOT_LOADED":
+            status = "WARN"
+        elif readiness == "WALLET_STATUS_UNKNOWN":
+            status = payload.get("status", "SKIP")
+        else:
+            status = payload.get("status", "UNKNOWN")
+        return Check("wallet", status, payload.get("message", "Wallet readiness was not reported"),
+                     {"readiness": readiness,
+                      "wallet_functionality": data.get("wallet_functionality"),
+                      "wallet_loaded": data.get("wallet_loaded"),
+                      "staking_monitoring": data.get("staking_monitoring"),
+                      "node_monitoring": data.get("node_monitoring")})
 
     def _environment(self) -> Check:
         return Check("environment", "PASS", "Operating system and architecture detected",
