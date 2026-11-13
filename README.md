@@ -148,6 +148,6 @@ GhostNode Tools is free and open-source software.
 If you find it useful and would like to support its development, voluntary
 GHOST donations are welcome.
 
-GHOST donation address: TO_BE_ADDED
+GHOST donation address: GZKRMKqiHp6WsVy9DsNAD9arSSK66Pv5Hv
 
 Donations are entirely optional. All features remain free.
