@@ -19,5 +19,4 @@ jobs:
       - run: python -m compileall -q ghostnode scripts
       - run: git diff --check
       - name: reject local data artifacts
-        run: |
-          ! find . -type f \( -name '*.sqlite*' -o -name '*.db' -o -name '*.lock' -o -name '.env' \) -print -quit | grep .
+        run: python scripts/check_tracked_artifacts.py
