@@ -184,7 +184,7 @@ def _track_reward_in_transaction(db: IntelligenceDB, block: dict[str, Any],
          _atomic(block.get("treasuryreward")), _atomic(block.get("gvrreward")),
          match.block_height + maturity_depth if match.block_height is not None and maturity_depth else None,
          now if status == RewardStatus.MATURED else None, "UNKNOWN", status.value,
-         completeness.value, "getblockreward+listtransactions+attribution", now, now),
+         completeness.value, block.get("reward_source", "getblock+listtransactions+attribution"), now, now),
     )
     reward_row = db.connection.execute("SELECT id FROM staking_rewards WHERE event_id=?", (event["id"],)).fetchone()
     if reward_row is None:

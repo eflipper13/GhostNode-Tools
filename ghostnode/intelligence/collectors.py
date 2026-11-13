@@ -193,7 +193,6 @@ def prepare_block_plan(path: str | Path, rpc: RPC, network: str = "main", batch_
         first_tx = txs[0] if isinstance(txs, list) and txs else None
         is_pos = is_pos_transaction(first_tx)
         if is_pos and first_tx.get("txid"):
-            reward, _ = rpc("getblockreward", [height])
             if not wallet_history_loaded:
                 wallet_entries_cache, wallet_history_status = _list_wallet_transactions(rpc)
                 verified_history_index = build_verified_history_index(
@@ -203,8 +202,20 @@ def prepare_block_plan(path: str | Path, rpc: RPC, network: str = "main", batch_
             entries = wallet_entries_cache
             history_status = wallet_history_status
 
-            reward_block = dict(reward) if isinstance(reward, dict) else {}
-            reward_block.update({"hash": block.get("hash"), "height": height, "coinstake": first_tx["txid"]})
+            # Ghost Core's getblockreward requires txindex on the production
+            # node.  Do not call it from the normal scanner: it is a network-
+            # reward enrichment, not a prerequisite for block persistence.
+            # Preserve any reward fields supplied by a caller that already has
+            # an independently verified block response, but never synthesize
+            # missing economics.
+            reward_block = {
+                key: block[key] for key in
+                ("stakereward", "blockreward", "treasuryreward", "gvrreward")
+                if key in block
+            }
+            reward_block.update({"hash": block.get("hash"), "height": height,
+                                 "coinstake": first_tx["txid"],
+                                 "reward_source": "getblock+listtransactions+attribution"})
             try:
                 normalized = normalize_reward_transaction(block, rpc, verified_history_index)
                 if normalized.inputs or normalized.outputs:
