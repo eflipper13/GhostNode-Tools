@@ -297,7 +297,10 @@ def test_scanner_integrates_wallet_reward_without_txindex(tmp_path):
     result = scan_catch_up(db, rpc, maturity_depth=100)
     assert result["status"] == "OK"
     assert db.connection.execute("SELECT status FROM staking_rewards").fetchone()[0] == "IMMATURE"
-    assert "getblockreward" in calls
+    assert "getblockreward" not in calls
+    assert db.connection.execute("SELECT data_completeness FROM staking_rewards").fetchone()[0] == "PARTIAL"
+    assert db.connection.execute("SELECT source_rpc FROM staking_rewards").fetchone()[0] == \
+        "getblock+listtransactions+attribution"
 
 
 def test_scanner_fixture_flows_through_adapter_without_fabricated_income(tmp_path):
