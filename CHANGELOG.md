@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0rc1
+## 0.1.0
 
 - Initial isolated release candidate.
 - Localhost-only dashboard default.
