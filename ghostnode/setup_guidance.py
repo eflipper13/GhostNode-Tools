@@ -57,7 +57,7 @@ def wallet_setup_report(config: Config | None = None) -> dict[str, Any]:
             "Local RPC is preferable; remote RPC must be protected and must not be exposed publicly.",
         ],
         "backup": {
-            "status": "GUIDANCE_REVIEWED",
+            "status": "GUIDANCE_AVAILABLE",
             "why": "A wallet backup is essential because loss of wallet data or key material can permanently prevent recovery of funds.",
             "guidance": [
                 "Back up the wallet files or wallet directory required by the exact Ghost Core wallet layout; do not assume every wallet is a single wallet.dat file.",
@@ -69,7 +69,7 @@ def wallet_setup_report(config: Config | None = None) -> dict[str, Any]:
             "verification": "GhostNode Tools does not create, copy, or automatically verify backups. BACKUP_VERIFIED requires a separately verified recovery or integrity procedure.",
         },
         "passphrase": {
-            "status": "GUIDANCE_REVIEWED",
+            "status": "GUIDANCE_AVAILABLE",
             "guidance": [
                 "Encrypt wallets using Ghost Core's official procedure.",
                 "Use a strong, unique passphrase stored in a trusted password manager or secure offline record.",
@@ -78,7 +78,7 @@ def wallet_setup_report(config: Config | None = None) -> dict[str, Any]:
             ],
         },
         "recovery": {
-            "status": "GUIDANCE_REVIEWED",
+            "status": "GUIDANCE_AVAILABLE",
             "guidance": [
                 "Stop and preserve the existing node and wallet before attempting recovery.",
                 "Restore only from a valid backup into an isolated, version-compatible Ghost Core data location.",
@@ -89,15 +89,15 @@ def wallet_setup_report(config: Config | None = None) -> dict[str, Any]:
             "commands": "No version-specific restoration command is shown because it was not verified against official Ghost Core documentation.",
         },
         "checklist": [
-            {"item": "Wallet location identified or explicitly unknown", "status": "GUIDANCE_REVIEWED"},
-            {"item": "Encryption guidance reviewed", "status": "GUIDANCE_REVIEWED"},
-            {"item": "Secure backup guidance reviewed", "status": "GUIDANCE_REVIEWED"},
-            {"item": "Recovery procedure reviewed", "status": "GUIDANCE_REVIEWED"},
-            {"item": "Passphrase loss risks acknowledged", "status": "GUIDANCE_REVIEWED"},
+            {"item": "Wallet location identified or explicitly unknown", "status": "GUIDANCE_AVAILABLE"},
+            {"item": "Encryption guidance available", "status": "GUIDANCE_AVAILABLE"},
+            {"item": "Secure backup guidance available", "status": "GUIDANCE_AVAILABLE"},
+            {"item": "Recovery procedure available", "status": "GUIDANCE_AVAILABLE"},
+            {"item": "Passphrase loss risks explained", "status": "GUIDANCE_AVAILABLE"},
         ],
         "limitations": [
             "No wallet-changing RPC command is generated or executed.",
             "Ghost Core wallet-creation command syntax was not asserted because it was not verified from an official source in this repository.",
-            "BACKUP_REPORTED_BY_USER and BACKUP_VERIFIED are never claimed automatically.",
+            "GUIDANCE_REVIEWED requires explicit user acknowledgement; BACKUP_REPORTED_BY_USER and BACKUP_VERIFIED are never claimed automatically.",
         ],
     }

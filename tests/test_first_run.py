@@ -43,7 +43,7 @@ def test_init_healthy_local_wallet_is_repeatable_and_read_only(tmp_path):
     assert first["mode"] == "LOCAL_WALLET"
     assert first == second
     assert first["security"]["filesystem_written"] is False
-    assert first["security"]["backup_status"] == "GUIDANCE_REVIEWED"
+    assert first["security"]["backup_status"] == "GUIDANCE_AVAILABLE"
     assert sorted(Path(config.datadir).iterdir()) == before
     assert "wallet-changing" not in str(first).lower()
     assert set(calls) <= {"getblockchaininfo", "getnetworkinfo", "getstakinginfo",
@@ -93,5 +93,5 @@ def test_init_unsynchronized_node_warns_and_unknown_wallet_path_is_explicit(tmp_
     assert any(check["name"] == "synchronization" for stage in report["stages"]
                if stage["name"] == "staking" for check in stage["checks"])
     security = next(stage for stage in report["stages"] if stage["name"] == "wallet_security")
-    assert security["details"]["backup_status"] == "GUIDANCE_REVIEWED"
+    assert security["details"]["backup_status"] == "GUIDANCE_AVAILABLE"
     assert security["details"]["wallet_location"]["status"] == "WALLET_PATH_UNKNOWN"

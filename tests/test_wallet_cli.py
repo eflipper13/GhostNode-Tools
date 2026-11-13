@@ -10,7 +10,7 @@ def test_wallet_setup_json_is_guidance_only():
     assert "guidance_only" in result.output
     assert "private keys" in result.output
     assert "getnewwallet" not in result.output
-    assert "GUIDANCE_REVIEWED" in result.output
+    assert "GUIDANCE_AVAILABLE" in result.output
     assert "BACKUP_VERIFIED" in result.output
     assert "passphrase" in result.output.lower()
     assert "recovery" in result.output.lower()

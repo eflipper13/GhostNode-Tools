@@ -50,6 +50,8 @@ an arbitrary RPC error; unsupported or failed wallet RPC is reported as
 - First-run output never claims installation, wallet creation, backup
   verification, or staking activation unless those states are independently
   verified by existing diagnostics.
+- Automatically generated security instructions are `GUIDANCE_AVAILABLE`;
+  `GUIDANCE_REVIEWED` requires explicit user acknowledgement.
 
 ## Compatibility and safety
 

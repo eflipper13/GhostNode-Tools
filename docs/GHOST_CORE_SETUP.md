@@ -70,7 +70,8 @@ Remote RPC is not treated as a missing local Ghost Core installation.
 
 `init` never installs software, writes RPC configuration, creates or loads a
 wallet, changes wallet state, creates or verifies backups, manages services, or
-writes files. It may report `GUIDANCE_REVIEWED`, but never claims
+writes files. It reports `GUIDANCE_AVAILABLE` until the user explicitly
+acknowledges the guidance, and never claims
 `BACKUP_REPORTED_BY_USER` or `BACKUP_VERIFIED` automatically.
 
 ## Wallet readiness and setup guidance
@@ -105,10 +106,11 @@ application directory and never provide private keys, recovery phrases,
 passwords, cookies, or RPC credentials to GhostNode Tools.
 
 The setup report includes backup, encryption, passphrase, and recovery
-guidance. It does not copy or verify backups. `GUIDANCE_REVIEWED` means only
-that the instructions were displayed; `BACKUP_REPORTED_BY_USER` and
-`BACKUP_VERIFIED` are not claimed automatically. Keep passphrases separate
-from backups, and never overwrite an existing wallet during recovery. A lost
+guidance. It does not copy or verify backups. `GUIDANCE_AVAILABLE` means only
+that instructions are available; `GUIDANCE_REVIEWED` requires explicit user
+acknowledgement. `BACKUP_REPORTED_BY_USER` and `BACKUP_VERIFIED` are not
+claimed automatically. Keep passphrases separate from backups, and never
+overwrite an existing wallet during recovery. A lost
 encryption passphrase is not guaranteed recoverable.
 
 Keep the dashboard on `127.0.0.1` and use an SSH tunnel for authorized remote

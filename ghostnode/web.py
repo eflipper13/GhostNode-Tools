@@ -53,7 +53,7 @@ def _dashboard_first_run(config: Config, wallet_result: Result,
             "STAKING_MONITORING_READY" if staking_result.status == Status.OK and wallet_result.data.get("loaded")
             else "NODE_ONLY_READY" if wallet_result.data.get("loaded") is False else "UNKNOWN"
         ),
-        "backup_status": "GUIDANCE_REVIEWED",
+        "backup_status": "GUIDANCE_AVAILABLE",
         "dashboard_bind": "127.0.0.1",
         "read_only": True,
     }

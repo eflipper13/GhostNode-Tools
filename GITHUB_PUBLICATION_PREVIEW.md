@@ -13,15 +13,15 @@ Visibility: public (planned only; not configured here).
 
 License: MIT
 
-Release assets: `GhostNode-Tools-v0.1.0.tar.gz` and
-`GhostNode-Tools-v0.1.0.tar.gz.sha256`
+Release assets: not configured for this release candidate; publication is out
+of scope.
 
 Topics: `ghost`, `ghost-core`, `blockchain`, `node-monitoring`, `staking`,
 `python`, `open-source`
 
 ## Proposed release
 
-### `v0.1.0 — Initial Public Release`
+### `v0.2.0-rc1 — First-run diagnostics release candidate`
 
 - Read-only Ghost Core status, network, wallet and staking diagnostics.
 - Local dashboard with localhost-safe defaults.
@@ -30,17 +30,18 @@ Topics: `ghost`, `ghost-core`, `blockchain`, `node-monitoring`, `staking`,
   states.
 - Portable configuration examples, CI, security guidance and systemd
   templates.
+- Integrated first-run readiness workflow with explicit operating modes.
 
 This preview does not create a remote repository, tag, release, or GitHub
 connection.
 
 ## Release notes
 
-GhostNode Tools v0.1.0 is a read-only local diagnostics and staking-intelligence
-release for Ghost Core operators. It includes status, network, wallet and
-staking diagnostics, a localhost-only dashboard, conservative lifecycle and
-incomplete-data handling, portable configuration examples, and fixture-based
-tests.
+GhostNode Tools v0.2.0-rc1 is a read-only local diagnostics and
+staking-intelligence release candidate for Ghost Core operators. It includes
+status, network, wallet and staking diagnostics, a localhost-only dashboard,
+conservative lifecycle and incomplete-data handling, portable configuration
+examples, and fixture-based tests.
 
 The release does not send funds, unlock wallets, export keys, expose a public
 RPC interface, or include a donation monitor. Historical reward attribution is

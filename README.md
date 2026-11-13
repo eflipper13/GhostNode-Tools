@@ -1,4 +1,4 @@
-# GhostNode Tools v0.1
+# GhostNode Tools v0.2.0 Release Candidate 1
 
 Licensed under the MIT License. See [LICENSE](LICENSE).
 
@@ -77,8 +77,9 @@ read-only RPC calls; it never loads, unlocks or transacts with a wallet.
 
 Wallet setup guidance covers location uncertainty, encryption, passphrase
 security, offline backups, and recovery. It never copies or verifies wallet
-files and never claims `BACKUP_REPORTED_BY_USER` or `BACKUP_VERIFIED` without
-an external, explicitly verified process.
+files and reports `GUIDANCE_AVAILABLE` until the user explicitly acknowledges
+the guidance. It never claims `BACKUP_REPORTED_BY_USER` or `BACKUP_VERIFIED`
+without an external, explicitly verified process.
 
 The integrated first-run workflow combines these diagnostics without changing
 system state:
