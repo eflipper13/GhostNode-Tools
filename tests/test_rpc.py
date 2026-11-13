@@ -75,6 +75,20 @@ def test_command_matches_runner_environment_without_wallet_for_node_probe(tmp_pa
     ]
 
 
+def test_remote_rpc_endpoint_is_forwarded_without_credentials(tmp_path):
+    cli = tmp_path / "ghost-cli"
+    cli.write_text("#!/bin/sh\n")
+    cli.chmod(0o700)
+    config = Config(cli_path=str(cli), datadir="/tmp/ghost-data",
+                    rpc_host="node.example", rpc_port=51725)
+    command = rpc._build_command("getblockchaininfo", config)
+    assert command == [str(cli), "-datadir=/tmp/ghost-data",
+                       "-rpcconnect=node.example", "-rpcport=51725",
+                       "getblockchaininfo"]
+    assert all("password" not in item.lower() and "cookie" not in item.lower()
+               for item in command)
+
+
 def test_wallet_context_is_only_added_when_explicitly_requested(tmp_path):
     cli = tmp_path / "ghost-cli"
     cli.write_text("#!/bin/sh\n")

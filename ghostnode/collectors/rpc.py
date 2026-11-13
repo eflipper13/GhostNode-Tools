@@ -119,7 +119,12 @@ def _build_command(method: str, config: Config, wallet: str | None = None, args:
     cli_path = _resolve_cli_path(config)
     if cli_path is None:
         return None
-    return [cli_path, f"-datadir={os.path.expanduser(config.datadir)}",
+    endpoint_args = []
+    if config.rpc_host:
+        endpoint_args.append(f"-rpcconnect={config.rpc_host}")
+    if config.rpc_port is not None:
+        endpoint_args.append(f"-rpcport={config.rpc_port}")
+    return [cli_path, f"-datadir={os.path.expanduser(config.datadir)}", *endpoint_args,
             *([f"-rpcwallet={wallet}"] if wallet else []), method,
             *[_serialize_cli_arg(arg) for arg in (args or [])]]
 
