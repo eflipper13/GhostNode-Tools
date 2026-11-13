@@ -13,15 +13,15 @@ Visibility: public (planned only; not configured here).
 
 License: MIT
 
-Release assets: not configured for this release candidate; publication is out
-of scope.
+Release assets: prepared locally for this release; publication remains a
+separate owner-approved step.
 
 Topics: `ghost`, `ghost-core`, `blockchain`, `node-monitoring`, `staking`,
 `python`, `open-source`
 
 ## Proposed release
 
-### `v0.2.0-rc1 — First-run diagnostics release candidate`
+### `v0.2.0 — First-run diagnostics release`
 
 - Read-only Ghost Core status, network, wallet and staking diagnostics.
 - Local dashboard with localhost-safe defaults.
@@ -37,8 +37,8 @@ connection.
 
 ## Release notes
 
-GhostNode Tools v0.2.0-rc1 is a read-only local diagnostics and
-staking-intelligence release candidate for Ghost Core operators. It includes
+GhostNode Tools v0.2.0 is a read-only local diagnostics and
+staking-intelligence release for Ghost Core operators. It includes
 status, network, wallet and staking diagnostics, a localhost-only dashboard,
 conservative lifecycle and incomplete-data handling, portable configuration
 examples, and fixture-based tests.

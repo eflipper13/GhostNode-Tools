@@ -1,4 +1,4 @@
-# GhostNode Tools v0.2.0 Release Candidate 1
+# GhostNode Tools v0.2.0
 
 Licensed under the MIT License. See [LICENSE](LICENSE).
 
@@ -116,7 +116,7 @@ synthetic history is generated.
 ## systemd deployment (manual)
 
 The repository includes unit templates only. Review them before installation;
-they are not installed or activated by this release candidate.
+they are not installed or activated by this release.
 
 ```bash
 sudo install -m 0644 deploy/ghostnode-dashboard@.service /etc/systemd/system/ghostnode-dashboard@.service

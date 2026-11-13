@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.0rc1
+## 0.2.0
 
 - Read-only Ghost Core detection and RPC/network diagnostics.
 - Wallet readiness diagnostics and safe wallet setup, backup, passphrase, and
@@ -10,12 +10,14 @@
 - Local wallet location metadata detection without opening wallet storage.
 - Localhost-only dashboard readiness summary and expanded regression coverage.
 
-This release candidate does not install Ghost Core, change wallet state, create
-or verify backups, manage services, or expose RPC publicly.
+This release does not install Ghost Core, change wallet state, create or
+verify backups, manage services, or expose RPC publicly. Ghost Core
+  installation, wallet creation, backup, and recovery are guidance-only. The
+  first-run workflow is read-only.
 
 ## 0.1.0
 
-- Initial isolated release candidate.
+- Initial isolated release.
 - Localhost-only dashboard default.
 - Portable configuration and systemd templates.
 - Read-only Intelligence and conservative reward-accounting test suite.

@@ -3,7 +3,7 @@
 This document describes release review only; it does not authorize production
 operations.
 
-For an uninstalled candidate, discard the isolated extraction directory and
+For an uninstalled release, discard the isolated extraction directory and
 restore the previously approved source and configuration from their separately
 managed backups. Do not use `git reset`, `git clean`, or `git checkout` on a
 working tree containing user changes.

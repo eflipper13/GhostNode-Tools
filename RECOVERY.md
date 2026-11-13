@@ -1,6 +1,6 @@
 # Offline recovery
 
-This release candidate is restored from its archive into a new directory and
+This release is restored from its archive into a new directory and
 configured through `.env.example` or an operator-owned environment file.
 
 1. Verify the archive checksum and extract it into a new directory.

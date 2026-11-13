@@ -1,7 +1,7 @@
 # Installation
 
 This guide describes an isolated Debian 12 installation for GhostNode Tools
-v0.2.0 Release Candidate 1. It does not install a systemd unit, modify Ghost Core, unlock a wallet,
+v0.2.0. It does not install a systemd unit, modify Ghost Core, unlock a wallet,
 or create transactions.
 
 ## Requirements
@@ -17,9 +17,9 @@ Do not copy a production `.cookie`, `ghost.conf`, wallet file, SQLite database,
 or secret into the release tree.
 
 ```bash
-sha256sum -c GhostNode-Tools-v0.2.0-rc1.tar.gz.sha256
+sha256sum -c GhostNode-Tools-v0.2.0.tar.gz.sha256
 mkdir -p "$HOME/ghostnode-tools"
-tar -xzf GhostNode-Tools-v0.2.0-rc1.tar.gz -C "$HOME/ghostnode-tools" --strip-components=1
+tar -xzf GhostNode-Tools-v0.2.0.tar.gz -C "$HOME/ghostnode-tools" --strip-components=1
 cd "$HOME/ghostnode-tools"
 python3.11 -m venv .venv
 . .venv/bin/activate
@@ -33,8 +33,8 @@ The checksum file must come from the same trusted release channel as the
 archive. Do not invent or skip hashes. No command above uses `sudo` or changes
 system-wide Python packages.
 
-The RC1 archive and checksum are local validation artifacts and are not a
-public release. The checksum file is kept beside the archive when running
+The stable archive and checksum are local release artifacts. Publication is a
+separate owner-approved step. The checksum file is kept beside the archive when running
 `sha256sum -c`.
 
 ## Local configuration
