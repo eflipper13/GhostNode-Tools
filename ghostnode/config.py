@@ -18,4 +18,5 @@ class Config:
     dashboard_port: int = (int(os.environ["GHOSTNODE_DASHBOARD_PORT"])
                             if os.environ.get("GHOSTNODE_DASHBOARD_PORT") else 44678)
     dashboard_token_file: str | None = os.environ.get("GHOSTNODE_DASHBOARD_TOKEN_FILE") or None
+    dashboard_lan_auth_mode: str = os.environ.get("GHOSTNODE_DASHBOARD_LAN_AUTH_MODE", "token_required")
     dashboard_network_config: str | None = os.environ.get("GHOSTNODE_NETWORK_CONFIG") or None

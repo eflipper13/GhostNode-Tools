@@ -8,7 +8,7 @@ from ghostnode.cli import cli
 from ghostnode.collectors import network
 from ghostnode.commands import network as network_command
 from ghostnode.config import Config
-from ghostnode.network import (LAN_MODE, LOCALHOST_MODE, NetworkSettings,
+from ghostnode.network import (LAN_MODE, LOCALHOST_MODE, TRUSTED_LAN, NetworkSettings,
                                ports_available, save_network_settings,
                                token_is_valid, validate_network_settings)
 from ghostnode.web import create_app
@@ -103,7 +103,7 @@ def test_network_config_persistence_is_atomic_and_non_secret(tmp_path):
     saved = save_network_settings(NetworkSettings(LOCALHOST_MODE, None, 44679), path)
     assert saved == path
     assert path.stat().st_mode & 0o777 == 0o600
-    assert "token" not in path.read_text()
+    assert "test-token" not in path.read_text()
     save_network_settings(NetworkSettings(LOCALHOST_MODE, None, 44680), path)
     assert (tmp_path / "network.json.previous").exists()
     assert '44679' in (tmp_path / "network.json.previous").read_text()
@@ -126,6 +126,31 @@ async def test_lan_dashboard_requires_token_and_allows_authorized_read(monkeypat
     assert denied.status_code == 401
     assert allowed.status_code == 200
     assert allowed.json()["data"]["security_status"] == "AUTHENTICATED_LAN"
+
+
+@pytest.mark.anyio
+async def test_trusted_lan_allows_read_only_access_but_protects_admin(monkeypatch):
+    monkeypatch.setattr("ghostnode.network.available_lan_ipv4", lambda: ("192.168.1.100",))
+    app = create_app(network_settings=NetworkSettings(LAN_MODE, "192.168.1.100", 44678, TRUSTED_LAN),
+                     dashboard_token="admin-token")
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        settings = await client.get("/api/network/settings")
+        proposal_denied = await client.post("/api/network/proposals", json={"mode": "localhost"})
+        proposal_allowed = await client.post("/api/network/proposals",
+                                             headers={"Authorization": "Bearer admin-token",
+                                                      "Origin": "http://192.168.1.100:44678"},
+                                             json={"mode": "localhost"})
+    assert settings.status_code == 200
+    assert settings.json()["data"]["security_status"] == "TRUSTED_LAN"
+    assert proposal_denied.status_code == 401
+    assert proposal_allowed.status_code == 200
+
+
+def test_invalid_lan_auth_mode_is_rejected():
+    with pytest.raises(ValueError, match="authentication mode"):
+        validate_network_settings(NetworkSettings(LAN_MODE, "192.168.1.100", 44678, "unsafe"),
+                                  available=("192.168.1.100",))
 
 
 @pytest.mark.anyio

@@ -16,7 +16,7 @@ from ghostnode.intelligence.views import collector as intelligence_collector
 from ghostnode.intelligence.views import overview as intelligence_overview
 from ghostnode.intelligence.views import performance as intelligence_performance
 from ghostnode.intelligence.views import rewards as intelligence_rewards
-from ghostnode.network import (LAN_MODE, LOCALHOST, NetworkSettings, load_network_settings,
+from ghostnode.network import (LAN_MODE, LOCALHOST, TOKEN_REQUIRED, NetworkSettings, load_network_settings,
                                read_dashboard_token, token_is_valid, validate_network_settings)
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -111,7 +111,7 @@ def create_app(config: Config | None = None, clock: Callable[[], datetime] | Non
                                    active_config.dashboard_port)
     settings = validate_network_settings(settings)
     expected_token = dashboard_token if dashboard_token is not None else read_dashboard_token(active_config.dashboard_token_file)
-    if settings.mode == LAN_MODE and not expected_token:
+    if settings.mode == LAN_MODE and settings.lan_auth_mode == TOKEN_REQUIRED and not expected_token:
         raise ValueError("LAN dashboard mode requires GHOSTNODE_DASHBOARD_TOKEN_FILE or GHOSTNODE_DASHBOARD_TOKEN")
     templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
     app = FastAPI(title="GhostNode Tools", docs_url=None, redoc_url=None)
@@ -129,11 +129,14 @@ def create_app(config: Config | None = None, clock: Callable[[], datetime] | Non
 
     @app.middleware("http")
     async def dashboard_access(request: Request, call_next):
-        if settings.mode == LAN_MODE and listener_host(request) != LOCALHOST:
+        is_lan_request = settings.mode == LAN_MODE and listener_host(request) != LOCALHOST
+        if is_lan_request and (settings.lan_auth_mode == TOKEN_REQUIRED or request.method in {"POST", "PUT", "PATCH", "DELETE"}):
             authorization = request.headers.get("authorization", "")
             provided = authorization[7:].strip() if authorization.lower().startswith("bearer ") else None
             if not token_is_valid(provided, expected_token):
-                return JSONResponse({"detail": "LAN dashboard authentication required"}, status_code=401,
+                detail = ("LAN dashboard authentication required" if settings.lan_auth_mode == TOKEN_REQUIRED
+                          else "administrative LAN authentication required")
+                return JSONResponse({"detail": detail}, status_code=401,
                                     headers={"WWW-Authenticate": "Bearer"})
         if request.method in {"POST", "PUT", "PATCH", "DELETE"} and not local_or_lan_origin_allowed(request):
             return JSONResponse({"detail": "request origin is not allowed"}, status_code=403)
@@ -178,7 +181,8 @@ def create_app(config: Config | None = None, clock: Callable[[], datetime] | Non
     async def api_network_settings():
         return {"status": "OK", "data": {
             **settings.as_dict(),
-            "security_status": "AUTHENTICATED_LAN" if settings.mode == LAN_MODE else "LOCALHOST_ONLY",
+            "security_status": (("AUTHENTICATED_LAN" if settings.lan_auth_mode == TOKEN_REQUIRED else "TRUSTED_LAN")
+                                 if settings.mode == LAN_MODE else "LOCALHOST_ONLY"),
             "token_configured": bool(expected_token) if settings.mode == LAN_MODE else False,
             "restart_required_for_apply": True,
             "read_only": True,
@@ -192,7 +196,8 @@ def create_app(config: Config | None = None, clock: Callable[[], datetime] | Non
             if not isinstance(payload, dict):
                 raise ValueError("request body must be a JSON object")
             proposed = NetworkSettings(payload.get("mode", settings.mode), payload.get("lan_address"),
-                                       int(payload.get("port", settings.port)))
+                                       int(payload.get("port", settings.port)),
+                                       payload.get("lan_auth_mode", settings.lan_auth_mode))
             checked = validate_network_settings(proposed)
         except (ValueError, TypeError, KeyError, JSONDecodeError) as exc:
             return JSONResponse({"status": "ERROR", "message": str(exc)}, status_code=400)

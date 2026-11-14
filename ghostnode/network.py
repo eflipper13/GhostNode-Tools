@@ -18,6 +18,8 @@ import psutil
 LOCALHOST = "127.0.0.1"
 LOCALHOST_MODE = "localhost"
 LAN_MODE = "localhost_lan"
+TOKEN_REQUIRED = "token_required"
+TRUSTED_LAN = "trusted_lan"
 DEFAULT_PORT = 44678
 
 
@@ -26,6 +28,7 @@ class NetworkSettings:
     mode: str = LOCALHOST_MODE
     lan_address: str | None = None
     port: int = DEFAULT_PORT
+    lan_auth_mode: str = TOKEN_REQUIRED
 
     @property
     def bind_addresses(self) -> tuple[str, ...]:
@@ -33,6 +36,7 @@ class NetworkSettings:
 
     def as_dict(self) -> dict[str, object]:
         return {"mode": self.mode, "lan_address": self.lan_address, "port": self.port,
+                "lan_auth_mode": self.lan_auth_mode,
                 "localhost_address": LOCALHOST, "bind_addresses": list(self.bind_addresses)}
 
 
@@ -68,7 +72,9 @@ def validate_network_settings(settings: NetworkSettings,
     if settings.mode == LOCALHOST_MODE:
         if settings.lan_address not in (None, ""):
             raise ValueError("localhost mode cannot configure a LAN address")
-        return NetworkSettings(LOCALHOST_MODE, None, settings.port)
+        return NetworkSettings(LOCALHOST_MODE, None, settings.port, TOKEN_REQUIRED)
+    if settings.lan_auth_mode not in {TOKEN_REQUIRED, TRUSTED_LAN}:
+        raise ValueError("unsupported LAN authentication mode")
     try:
         address = ipaddress.ip_address(settings.lan_address or "")
     except ValueError as exc:
@@ -79,7 +85,7 @@ def validate_network_settings(settings: NetworkSettings,
     assigned = set(available if available is not None else available_lan_ipv4())
     if str(address) not in assigned:
         raise ValueError("LAN address is not assigned to a local interface")
-    return NetworkSettings(LAN_MODE, str(address), settings.port)
+    return NetworkSettings(LAN_MODE, str(address), settings.port, settings.lan_auth_mode)
 
 
 def load_network_settings(path: str | Path | None = None) -> NetworkSettings:
@@ -90,7 +96,8 @@ def load_network_settings(path: str | Path | None = None) -> NetworkSettings:
         data = json.loads(target.read_text(encoding="utf-8"))
         return validate_network_settings(NetworkSettings(data.get("mode", LOCALHOST_MODE),
                                                          data.get("lan_address"),
-                                                         int(data.get("port", DEFAULT_PORT))))
+                                                         int(data.get("port", DEFAULT_PORT)),
+                                                         data.get("lan_auth_mode", data.get("auth_mode", TOKEN_REQUIRED))))
     except (OSError, ValueError, TypeError, json.JSONDecodeError):
         return NetworkSettings()
 
