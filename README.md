@@ -1,4 +1,6 @@
-# GhostNode Tools v0.2.0
+# GhostNode Tools
+
+[Latest release](https://github.com/eflipper13/GhostNode-Tools/releases/latest)
 
 Licensed under the MIT License. See [LICENSE](LICENSE).
 
@@ -16,7 +18,7 @@ unlocks wallets, or changes node configuration.
 
 No Ghost Core connection is required for M1.
 
-M2 adds read-only Ghost Core and wallet readiness diagnostics. The portable
+v0.3.0 adds configurable, validated dashboard network access. The portable
 defaults are `ghost-cli`, `~/.ghost`, and wallet `ghostmain`; they can be
 overridden with command options or environment variables.
 
@@ -64,9 +66,12 @@ python -m pip install --no-build-isolation --no-deps -e .
 ./bin/ghostnode web --host 127.0.0.1 --port 44678
 ```
 
-The dashboard is read-only, uses port `44678`, and is strictly localhost-only:
-the launcher rejects `0.0.0.0`, LAN addresses, and public addresses. It
-exposes `/` and `/api/status`; it has no wallet or command-execution endpoints.
+The dashboard is read-only and defaults to `127.0.0.1:44678`. It can optionally
+bind exactly one explicitly assigned private LAN IPv4 address in addition to
+localhost. Wildcard, multicast, public, loopback-as-LAN, and IPv6 addresses are
+rejected. LAN mode requires a private bearer token file; there is no default
+password and plain HTTP does not provide confidentiality. Keep LAN access on a
+trusted network or use HTTPS/SSH tunneling as appropriate.
 
 The dashboard groups diagnostics into Blockchain, Network, System, Service,
 Wallet, Staking Intelligence and Alerts. Wallet readiness is read-only and is
@@ -92,10 +97,12 @@ It reports `NODE_ONLY`, `LOCAL_WALLET`, or `REMOTE_NODE` and keeps node health
 separate from wallet and staking readiness. Remote RPC does not imply that a
 local Ghost Core installation is missing.
 
-Each refresh performs a bounded, synchronous read-only snapshot. The dashboard
-has no authentication. For remote use, keep the process bound to localhost and
-use an SSH tunnel or a separately hardened, authenticated proxy; do not change
-the bind address to expose it directly.
+Each refresh performs a bounded, synchronous read-only snapshot. Localhost mode
+has no login because it is loopback-only; LAN mode requires bearer
+authentication for every request. Network settings are displayed read-only and
+web requests can only submit a validated proposal; applying configuration and
+restarting the service remain explicit operator actions. For remote use, an SSH
+tunnel remains the preferred option.
 There is no persistent cache yet, so avoid opening many dashboard clients at
 once on a constrained node.
 
@@ -129,9 +136,10 @@ sudo systemctl stop ghostnode-dashboard.service
 sudo systemctl disable ghostnode-dashboard.service
 ```
 
-The unit runs as `etcmc`, uses the project `.venv`, and passes the production
-`ghost-cli` path through environment configuration. The panel has no login;
-keep it on the trusted LAN and do not expose it publicly.
+The unit runs as `etcmc`, uses the project `.venv`, and reads dashboard network
+settings from its private environment file. Localhost is the default. To use
+LAN mode, configure a private token file and an explicitly assigned LAN IPv4
+address; never use `0.0.0.0` or expose the dashboard publicly.
 
 The intelligence collector unit is separate and is not enabled by default. It
 requires a separate operator review, backup, and migration plan.

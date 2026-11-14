@@ -114,4 +114,7 @@ overwrite an existing wallet during recovery. A lost
 encryption passphrase is not guaranteed recoverable.
 
 Keep the dashboard on `127.0.0.1` and use an SSH tunnel for authorized remote
-viewing. Never expose Ghost Core RPC directly to the public Internet.
+viewing by default. If `localhost_lan` is explicitly configured, use exactly
+one assigned private LAN IPv4 address and a private bearer token; plain HTTP
+does not provide confidentiality. Never expose Ghost Core RPC directly to the
+public Internet.

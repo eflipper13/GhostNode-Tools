@@ -5,11 +5,17 @@ Never run it with wallet credentials in command-line arguments or environment
 variables. Keep `.cookie`, `ghost.conf`, wallet files, SQLite databases, WAL/SHM
 files, and mainnet reports outside the repository.
 
-The dashboard is enforced to bind only to `127.0.0.1` and has no
-authentication. Remote access should use an SSH tunnel; any reverse proxy
-must be separately authenticated and access-controlled. Do not replace the
-loopback bind with a LAN or public address. This document is not a guarantee
-of security or legal compliance.
+The dashboard defaults to `127.0.0.1` and localhost mode has no authentication
+because it is loopback-only. Optional LAN mode binds exactly one assigned
+private IPv4 address and requires a bearer token from a private file for every
+request. It rejects wildcard, multicast, public, loopback-as-LAN, and IPv6
+addresses. There is no default password. Plain HTTP on a LAN does not provide
+confidentiality; use an appropriately secured HTTPS layer or SSH tunnel when
+needed. This document is not a guarantee of security or legal compliance.
+
+The dashboard only displays network settings and accepts validated proposals;
+it cannot write systemd units or apply listener changes. Applying a change is
+an explicit operator action with a restart and rollback review.
 
 GhostNode Tools uses an application-level allowlist of read-only RPC methods.
 However, the Ghost Core RPC credentials supplied to the application may have

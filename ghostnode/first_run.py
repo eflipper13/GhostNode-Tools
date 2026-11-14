@@ -32,7 +32,7 @@ def _redacted_location(location: dict[str, Any]) -> dict[str, Any]:
 
 
 def first_run_report(config: Config, expected_network: str = "main",
-                     rpc_call=None) -> dict[str, Any]:
+                     rpc_call=None, network_plan: dict[str, Any] | None = None) -> dict[str, Any]:
     """Run existing diagnostics once and compose actionable first-run stages."""
     checks = GhostCoreDoctor(config, expected_network=expected_network,
                              rpc_call=rpc_call).run()
@@ -64,8 +64,9 @@ def first_run_report(config: Config, expected_network: str = "main",
         _stage("staking", staking + sync,
                "Staking readiness is reported from available node and wallet diagnostics."),
         {"name": "dashboard", "status": "PASS",
-         "message": "The read-only dashboard is available on its localhost-only interface.",
-         "details": {"bind": "127.0.0.1", "mutating_actions": False}},
+         "message": "The read-only dashboard is available on its configured interface after explicit operator review.",
+         "details": {"bind": "127.0.0.1", "mutating_actions": False,
+                     "network": network_plan or {"mode": "localhost", "restart_required": True}}},
     ]
     statuses = {stage["status"] for stage in stages}
     overall = "FAIL" if "FAIL" in statuses else "WARN" if "WARN" in statuses else "PASS"
@@ -79,7 +80,7 @@ def first_run_report(config: Config, expected_network: str = "main",
     next_steps.append("Run ghostnode doctor --json for detailed node checks.")
     next_steps.append("Run ghostnode wallet status --json for detailed wallet readiness.")
     next_steps.append("Run ghostnode wallet setup --json for backup and recovery guidance.")
-    next_steps.append("Start the dashboard explicitly with ghostnode web --host 127.0.0.1 when ready.")
+    next_steps.append("Review dashboard network settings, then start ghostnode web with the explicit approved mode.")
     return {
         "status": overall,
         "mode": mode,
@@ -91,4 +92,7 @@ def first_run_report(config: Config, expected_network: str = "main",
             "filesystem_written": False,
             "backup_status": "GUIDANCE_AVAILABLE",
         },
+        "network": network_plan or {"mode": "localhost", "lan_address": None,
+                                     "port": 44678, "restart_required": True,
+                                     "applied": False},
     }
