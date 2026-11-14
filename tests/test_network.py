@@ -1,11 +1,17 @@
 import json
 
+import httpx
+import pytest
 from click.testing import CliRunner
 
 from ghostnode.cli import cli
 from ghostnode.collectors import network
 from ghostnode.commands import network as network_command
 from ghostnode.config import Config
+from ghostnode.network import (LAN_MODE, LOCALHOST_MODE, NetworkSettings,
+                               ports_available, save_network_settings,
+                               token_is_valid, validate_network_settings)
+from ghostnode.web import create_app
 
 
 def test_network_peer_analysis_masks_addresses(monkeypatch):
@@ -59,3 +65,79 @@ def test_network_command_json(monkeypatch):
     payload = json.loads(result.output)
     assert result.exit_code == 0
     assert payload["status"] == "OK"
+
+
+def test_localhost_is_the_safe_default():
+    settings = validate_network_settings(NetworkSettings())
+    assert settings.mode == LOCALHOST_MODE
+    assert settings.bind_addresses == ("127.0.0.1",)
+
+
+def test_dual_address_requires_assigned_private_ipv4():
+    settings = validate_network_settings(NetworkSettings(LAN_MODE, "192.168.1.100", 44678), available=("192.168.1.100",))
+    assert settings.bind_addresses == ("127.0.0.1", "192.168.1.100")
+
+
+@pytest.mark.parametrize("address", ["0.0.0.0", "127.0.0.1", "224.0.0.1", "203.0.113.10", "::1"])
+def test_wildcard_loopback_multicast_public_and_ipv6_addresses_are_rejected(address):
+    with pytest.raises(ValueError):
+        validate_network_settings(NetworkSettings(LAN_MODE, address, 44678), available=())
+
+
+def test_unassigned_lan_address_is_rejected():
+    with pytest.raises(ValueError, match="not assigned"):
+        validate_network_settings(NetworkSettings(LAN_MODE, "192.168.1.100", 44678), available=())
+
+
+def test_port_conflict_detection_is_bounded(monkeypatch):
+    class BusySocket:
+        def setsockopt(self, *_args): pass
+        def bind(self, _address): raise OSError("busy")
+        def close(self): pass
+    monkeypatch.setattr("ghostnode.network.socket.socket", lambda *_args: BusySocket())
+    assert ports_available(NetworkSettings(LOCALHOST_MODE, None, 44678)) is False
+
+
+def test_network_config_persistence_is_atomic_and_non_secret(tmp_path):
+    path = tmp_path / "network.json"
+    saved = save_network_settings(NetworkSettings(LOCALHOST_MODE, None, 44679), path)
+    assert saved == path
+    assert path.stat().st_mode & 0o777 == 0o600
+    assert "token" not in path.read_text()
+    save_network_settings(NetworkSettings(LOCALHOST_MODE, None, 44680), path)
+    assert (tmp_path / "network.json.previous").exists()
+    assert '44679' in (tmp_path / "network.json.previous").read_text()
+
+
+def test_token_comparison_is_constant_time_semantically():
+    assert token_is_valid("correct", "correct")
+    assert not token_is_valid("wrong", "correct")
+    assert not token_is_valid(None, "correct")
+
+
+@pytest.mark.anyio
+async def test_lan_dashboard_requires_token_and_allows_authorized_read(monkeypatch):
+    monkeypatch.setattr("ghostnode.network.available_lan_ipv4", lambda: ("192.168.1.100",))
+    app = create_app(network_settings=NetworkSettings(LAN_MODE, "192.168.1.100", 44678), dashboard_token="test-token")
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        denied = await client.get("/api/network/settings")
+        allowed = await client.get("/api/network/settings", headers={"Authorization": "Bearer test-token"})
+    assert denied.status_code == 401
+    assert allowed.status_code == 200
+    assert allowed.json()["data"]["security_status"] == "AUTHENTICATED_LAN"
+
+
+@pytest.mark.anyio
+async def test_network_proposal_does_not_write_or_apply(monkeypatch, tmp_path):
+    monkeypatch.setattr("ghostnode.network.available_lan_ipv4", lambda: ("192.168.1.100",))
+    app = create_app(network_settings=NetworkSettings(LAN_MODE, "192.168.1.100", 44678), dashboard_token="test-token")
+    path = tmp_path / "network.json"
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        response = await client.post("/api/network/proposals",
+                                     headers={"Authorization": "Bearer test-token", "Origin": "http://192.168.1.100:44678"},
+                                     json={"mode": "localhost", "port": 44679})
+    assert response.status_code == 200
+    assert response.json()["data"]["applied"] is False
+    assert not path.exists()

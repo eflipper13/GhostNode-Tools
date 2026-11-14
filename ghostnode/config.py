@@ -13,3 +13,9 @@ class Config:
                             if os.environ.get("GHOSTNODE_RPC_PORT") else None)
     wallet_name: str = os.environ.get("GHOSTNODE_WALLET", "ghostmain")
     wallet_dir: str | None = os.environ.get("GHOSTNODE_WALLET_DIR") or None
+    dashboard_mode: str = os.environ.get("GHOSTNODE_DASHBOARD_MODE", "localhost")
+    dashboard_lan_address: str | None = os.environ.get("GHOSTNODE_DASHBOARD_LAN_ADDRESS") or None
+    dashboard_port: int = (int(os.environ["GHOSTNODE_DASHBOARD_PORT"])
+                            if os.environ.get("GHOSTNODE_DASHBOARD_PORT") else 44678)
+    dashboard_token_file: str | None = os.environ.get("GHOSTNODE_DASHBOARD_TOKEN_FILE") or None
+    dashboard_network_config: str | None = os.environ.get("GHOSTNODE_NETWORK_CONFIG") or None

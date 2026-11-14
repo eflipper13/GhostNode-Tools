@@ -1,7 +1,7 @@
 # Installation
 
 This guide describes an isolated Debian 12 installation for GhostNode Tools
-v0.2.0. It does not install a systemd unit, modify Ghost Core, unlock a wallet,
+v0.3.0. It does not install a systemd unit, modify Ghost Core, unlock a wallet,
 or create transactions.
 
 ## Requirements
@@ -17,9 +17,9 @@ Do not copy a production `.cookie`, `ghost.conf`, wallet file, SQLite database,
 or secret into the release tree.
 
 ```bash
-sha256sum -c GhostNode-Tools-v0.2.0.tar.gz.sha256
+sha256sum -c GhostNode-Tools-v0.3.0.tar.gz.sha256
 mkdir -p "$HOME/ghostnode-tools"
-tar -xzf GhostNode-Tools-v0.2.0.tar.gz -C "$HOME/ghostnode-tools" --strip-components=1
+tar -xzf GhostNode-Tools-v0.3.0.tar.gz -C "$HOME/ghostnode-tools" --strip-components=1
 cd "$HOME/ghostnode-tools"
 python3.11 -m venv .venv
 . .venv/bin/activate
@@ -58,9 +58,14 @@ does not load or unlock wallets.
 ./bin/ghostnode web --host 127.0.0.1 --port 44678
 ```
 
-The dashboard is read-only and strictly loopback-only. Wildcard, LAN, public,
-and IPv6 bind addresses are rejected. It has no login, so use an SSH tunnel for
-remote viewing, for example from a workstation:
+The dashboard is read-only and defaults to loopback. To enable the optional
+dual-address mode, configure `GHOSTNODE_DASHBOARD_MODE=localhost_lan`, an
+assigned private `GHOSTNODE_DASHBOARD_LAN_ADDRESS`, and a restrictive
+`GHOSTNODE_DASHBOARD_TOKEN_FILE` in a private environment file. The token file
+must already exist; GhostNode Tools never generates or logs a default password.
+Wildcard, public, multicast, loopback-as-LAN, and IPv6 addresses are rejected.
+Plain HTTP on a LAN does not provide confidentiality. For remote viewing,
+localhost mode with an SSH tunnel remains preferred:
 
 ```bash
 ssh -N -L 44678:127.0.0.1:44678 user@node

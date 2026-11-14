@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from json import JSONDecodeError
 from pathlib import Path
 from typing import Callable
 
@@ -15,6 +16,8 @@ from ghostnode.intelligence.views import collector as intelligence_collector
 from ghostnode.intelligence.views import overview as intelligence_overview
 from ghostnode.intelligence.views import performance as intelligence_performance
 from ghostnode.intelligence.views import rewards as intelligence_rewards
+from ghostnode.network import (LAN_MODE, LOCALHOST, NetworkSettings, load_network_settings,
+                               read_dashboard_token, token_is_valid, validate_network_settings)
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -94,14 +97,47 @@ def collect_dashboard(config: Config) -> dict:
     }
 
 
-def create_app(config: Config | None = None, clock: Callable[[], datetime] | None = None):
+def create_app(config: Config | None = None, clock: Callable[[], datetime] | None = None,
+               network_settings: NetworkSettings | None = None,
+               dashboard_token: str | None = None):
     from fastapi import FastAPI, Request
-    from fastapi.responses import HTMLResponse
+    from fastapi.responses import HTMLResponse, JSONResponse
     from fastapi.templating import Jinja2Templates
 
     active_config = config or Config()
+    settings = network_settings or load_network_settings(active_config.dashboard_network_config)
+    if network_settings is None and active_config.dashboard_mode != "localhost":
+        settings = NetworkSettings(active_config.dashboard_mode, active_config.dashboard_lan_address,
+                                   active_config.dashboard_port)
+    settings = validate_network_settings(settings)
+    expected_token = dashboard_token if dashboard_token is not None else read_dashboard_token(active_config.dashboard_token_file)
+    if settings.mode == LAN_MODE and not expected_token:
+        raise ValueError("LAN dashboard mode requires GHOSTNODE_DASHBOARD_TOKEN_FILE or GHOSTNODE_DASHBOARD_TOKEN")
     templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
     app = FastAPI(title="GhostNode Tools", docs_url=None, redoc_url=None)
+
+    def listener_host(request: Request) -> str:
+        server = request.scope.get("server")
+        return server[0] if isinstance(server, (tuple, list)) and server else LOCALHOST
+
+    def local_or_lan_origin_allowed(request: Request) -> bool:
+        origin = request.headers.get("origin")
+        if not origin or settings.mode != LAN_MODE:
+            return True
+        return origin in {f"http://{LOCALHOST}:{settings.port}",
+                          f"http://{settings.lan_address}:{settings.port}"}
+
+    @app.middleware("http")
+    async def dashboard_access(request: Request, call_next):
+        if settings.mode == LAN_MODE and listener_host(request) != LOCALHOST:
+            authorization = request.headers.get("authorization", "")
+            provided = authorization[7:].strip() if authorization.lower().startswith("bearer ") else None
+            if not token_is_valid(provided, expected_token):
+                return JSONResponse({"detail": "LAN dashboard authentication required"}, status_code=401,
+                                    headers={"WWW-Authenticate": "Bearer"})
+        if request.method in {"POST", "PUT", "PATCH", "DELETE"} and not local_or_lan_origin_allowed(request):
+            return JSONResponse({"detail": "request origin is not allowed"}, status_code=403)
+        return await call_next(request)
 
     @app.get("/", response_class=HTMLResponse)
     async def dashboard(request: Request):
@@ -137,5 +173,32 @@ def create_app(config: Config | None = None, clock: Callable[[], datetime] | Non
     @app.get("/api/intelligence/collector")
     async def api_intelligence_collector():
         return intelligence_collector(_intelligence_path())
+
+    @app.get("/api/network/settings")
+    async def api_network_settings():
+        return {"status": "OK", "data": {
+            **settings.as_dict(),
+            "security_status": "AUTHENTICATED_LAN" if settings.mode == LAN_MODE else "LOCALHOST_ONLY",
+            "token_configured": bool(expected_token) if settings.mode == LAN_MODE else False,
+            "restart_required_for_apply": True,
+            "read_only": True,
+        }}
+
+    @app.post("/api/network/proposals")
+    async def api_network_proposal(request: Request):
+        """Validate a proposal without writing files or changing listeners."""
+        try:
+            payload = await request.json()
+            if not isinstance(payload, dict):
+                raise ValueError("request body must be a JSON object")
+            proposed = NetworkSettings(payload.get("mode", settings.mode), payload.get("lan_address"),
+                                       int(payload.get("port", settings.port)))
+            checked = validate_network_settings(proposed)
+        except (ValueError, TypeError, KeyError, JSONDecodeError) as exc:
+            return JSONResponse({"status": "ERROR", "message": str(exc)}, status_code=400)
+        return {"status": "PROPOSED", "data": {"settings": checked.as_dict(),
+                                                  "applied": False,
+                                                  "restart_required": True,
+                                                  "message": "Review and apply through the explicit operator workflow."}}
 
     return app

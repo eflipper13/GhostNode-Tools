@@ -25,7 +25,7 @@
 <body>
 <main id="dashboard">
   <header><div><h1>GhostNode Tools</h1><div class="muted">Read-only node dashboard</div></div><span class="badge {{ snapshot.status }}">{{ snapshot.status }}</span></header>
-  <nav aria-label="Dashboard sections"><a href="#dashboard">Dashboard</a><a href="#staking-intelligence">Staking Intelligence</a><a href="#performance-history">Performance</a><a href="#rewards-intelligence">Rewards</a><a href="#chain-monitoring">Chain</a><a href="#collector-health">Collector</a><a href="#blockchain">Blockchain</a><a href="#network">Network</a><a href="#wallet">Wallet</a><a href="#system">System</a><a href="#alerts">Alerts</a></nav>
+  <nav aria-label="Dashboard sections"><a href="#dashboard">Dashboard</a><a href="#staking-intelligence">Staking Intelligence</a><a href="#performance-history">Performance</a><a href="#rewards-intelligence">Rewards</a><a href="#chain-monitoring">Chain</a><a href="#collector-health">Collector</a><a href="#network-settings">Network Settings</a><a href="#blockchain">Blockchain</a><a href="#network">Network</a><a href="#wallet">Wallet</a><a href="#system">System</a><a href="#alerts">Alerts</a></nav>
   <div class="toolbar"><button id="refresh" type="button">Refresh</button><span class="muted">History:</span><div id="time-filters" role="group" aria-label="History range"></div><span id="connection" class="connection ok">API connected</span></div>
   <div id="updated" class="muted" style="margin-bottom:16px">Updated {{ snapshot.updated_at }}</div>
   <div id="user-overview" class="user-overview" aria-label="Staking overview"></div>
@@ -116,12 +116,13 @@
   async function loadIntelligence() {
     const target=document.getElementById('intelligence-content');
     try {
-      const [overview, performance, rewards, blocks, health] = await Promise.all([
+      const [overview, performance, rewards, blocks, health, networkSettings] = await Promise.all([
         fetch('/api/intelligence/overview',{cache:'no-store'}).then(r=>r.json()),
         fetch(`/api/intelligence/performance?period=${encodeURIComponent(selectedPeriod)}&limit=200`,{cache:'no-store'}).then(r=>r.json()),
         fetch('/api/intelligence/rewards?limit=20',{cache:'no-store'}).then(r=>r.json()),
         fetch('/api/intelligence/blocks?active=true&limit=20',{cache:'no-store'}).then(r=>r.json()),
-        fetch('/api/intelligence/collector',{cache:'no-store'}).then(r=>r.json())
+        fetch('/api/intelligence/collector',{cache:'no-store'}).then(r=>r.json()),
+        fetch('/api/network/settings',{cache:'no-store'}).then(r=>r.json())
       ]);
       target.replaceChildren(); const o=overview.data||{}, r=o.rewards||{}, b=o.blocks||{}; window.intelligenceOverview={...o,collector_status:health.status}; renderUserOverview(currentSnapshot);
       target.append(intelligenceSection('staking-intelligence','Staking Intelligence',overview.status,[['Last snapshot',text(o.last_snapshot)],['Status',text(overview.status)],['Wallet weight',text(o.staking?.wallet_weight)],['Network weight',text(o.staking?.network_weight)],['Difficulty',text(o.staking?.difficulty)],['Expected time',text(o.staking?.expected_time_seconds)]],'wide'));
@@ -132,6 +133,7 @@
       target.append(intelligenceSection('chain-monitoring','Chain Monitoring',overview.status,blockEntries,'wide'));
       const healthStatus = health.data?.last_run?.status === 'RUNNING' ? 'RUNNING' : (health.status||'NOT STARTED');
       target.append(intelligenceSection('collector-health','Collector Health',healthStatus,[['Status',text(healthStatus)],['Last run',text(health.data?.last_run?.finished_at)],['Last successful run',text(health.data?.last_successful_run?.finished_at)],['Last scanned height',text(health.data?.chain_state?.last_scanned_height)],['Database',health.data?.database_bytes==null?'N/A':bytes(health.data.database_bytes)],['SQLite',text(health.data?.sqlite_integrity)],['Last error',text(health.data?.last_run?.error_message)]],'wide'));
+      const ns=networkSettings.data||{}; target.append(intelligenceSection('network-settings','Network Settings',networkSettings.status||'UNKNOWN',[['Current mode',text(ns.mode)],['Localhost address',text(ns.localhost_address)],['Configured LAN address',text(ns.lan_address)],['Dashboard port',text(ns.port)],['Security',text(ns.security_status)],['Restart required',ns.restart_required_for_apply==null?'N/A':ns.restart_required_for_apply?'Yes':'No'],['Changes', 'Propose only; operator review and explicit apply required']],'wide'));
       target.append(intelligenceSection('performance-history','Staking Performance',performance.status,[['Analysis period',selectedPeriod],['Snapshots',String(performance.data?.length||0)],['Source','SQLite staking_snapshots'],['Missing data','Shown as N/A; no interpolation']],'wide'));
       const charts=document.createElement('section'); charts.className='full'; const chartTitle=document.createElement('h2'); chartTitle.textContent='Historical Charts'; charts.appendChild(chartTitle); const grid=document.createElement('div'); grid.className='chart-grid'; const names=[['Network stake weight','network_weight'],['Difficulty','difficulty'],['Expected time','expected_time'],['Cumulative confirmed rewards','cumulative_confirmed_rewards']]; names.forEach(([title,key])=>grid.appendChild(chart(title,performance.series?.[key]))); charts.appendChild(grid); target.append(charts);
       target.append(intelligenceTable('Reward History',rewards.data,[{label:'Created',key:'created_at'},{label:'Lifecycle',key:'status'},{label:'Completeness',key:'data_completeness'},{label:'Wallet reward',render:r=>atomicGhost(r.wallet_reward_atomic)},{label:'Block reward',render:r=>atomicGhost(r.block_reward_atomic)},{label:'Treasury',render:r=>atomicGhost(r.treasury_reward_atomic)},{label:'GVR',render:r=>atomicGhost(r.gvr_reward_atomic)},{label:'Source',key:'source_rpc'}]));

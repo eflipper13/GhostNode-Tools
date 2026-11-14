@@ -6,6 +6,8 @@ import click
 
 from ghostnode.config import Config
 from ghostnode.first_run import first_run_report
+from ghostnode.network import (NetworkSettings, save_network_settings,
+                               validate_network_settings)
 
 
 @click.command("init")
@@ -17,14 +19,37 @@ from ghostnode.first_run import first_run_report
 @click.option("--rpc-host", default=Config.rpc_host)
 @click.option("--rpc-port", default=Config.rpc_port, type=int)
 @click.option("--network", "expected_network", default="main", show_default=True)
+@click.option("--network-mode", type=click.Choice(["localhost", "localhost_lan"]), default="localhost",
+              show_default=True)
+@click.option("--lan-address", default=None, help="Assigned private LAN IPv4 address for localhost_lan mode.")
+@click.option("--dashboard-port", default=44678, show_default=True, type=int)
+@click.option("--network-config", default=None, help="Private network configuration path.")
+@click.option("--apply-network", is_flag=True, help="Persist the reviewed network settings atomically.")
+@click.option("--confirm-network", is_flag=True, help="Confirm the explicit network configuration review.")
 def init(as_json: bool, cli_path: str, datadir: str, wallet_name: str,
          wallet_dir: str | None, rpc_host: str | None, rpc_port: int | None,
-         expected_network: str) -> None:
+         expected_network: str, network_mode: str, lan_address: str | None,
+         dashboard_port: int, network_config: str | None,
+         apply_network: bool, confirm_network: bool) -> None:
     """Run the safe, read-only first-run readiness workflow."""
+    try:
+        network = validate_network_settings(NetworkSettings(network_mode, lan_address, dashboard_port))
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+    network_plan = {**network.as_dict(), "restart_required": True, "applied": False,
+                    "security": "token required for localhost_lan"}
+    if apply_network:
+        if not confirm_network:
+            raise click.ClickException("--apply-network requires --confirm-network after reviewing the plan")
+        try:
+            path = save_network_settings(network, network_config)
+        except (OSError, ValueError) as exc:
+            raise click.ClickException(f"network configuration was not applied: {exc}") from exc
+        network_plan.update({"applied": True, "config_path": str(path)})
     payload = first_run_report(
         Config(cli_path=cli_path, datadir=datadir, wallet_name=wallet_name,
                wallet_dir=wallet_dir, rpc_host=rpc_host, rpc_port=rpc_port),
-        expected_network=expected_network,
+        expected_network=expected_network, network_plan=network_plan,
     )
     if as_json:
         click.echo(json.dumps(payload, indent=2, sort_keys=True))

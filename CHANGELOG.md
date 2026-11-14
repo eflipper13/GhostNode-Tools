@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.0
+
+- Version-neutral README with a latest-release link.
+- Validated dashboard network modes: localhost-only by default, or localhost
+  plus one explicitly assigned private LAN IPv4 address.
+- Bearer-token authentication for LAN listeners with no default password.
+- Read-only network settings display and validated, non-applying change proposals.
+- Atomic private network configuration persistence and port-conflict checks.
+- First-run network review options with explicit confirmation before persistence.
+
+LAN mode uses plain HTTP unless deployed behind an independently secured HTTPS
+layer; GhostNode Tools does not claim confidentiality for plain LAN traffic.
+
 ## 0.2.0
 
 - Read-only Ghost Core detection and RPC/network diagnostics.

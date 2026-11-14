@@ -28,6 +28,7 @@ def test_detect_lan_fallback(monkeypatch):
 def test_localhost_bind_is_allowed(monkeypatch):
     calls = []
     monkeypatch.setattr(web_command, "detect_lan_host", lambda: (_ for _ in ()).throw(AssertionError("auto detection called")))
+    monkeypatch.setattr(web_command, "ports_available", lambda settings: True)
     monkeypatch.setattr(web_command.uvicorn, "run", lambda app, host, port: calls.append((host, port))) if hasattr(web_command, "uvicorn") else None
     import uvicorn
     monkeypatch.setattr(uvicorn, "run", lambda app, host, port: calls.append((host, port)))
@@ -41,4 +42,4 @@ def test_public_and_lan_binds_are_rejected():
     for address in ("0.0.0.0", "192.168.1.100", "203.0.113.10", "::1"):
         result = runner.invoke(web_command.web, ["--host", address, "--port", "44678"])
         assert result.exit_code != 0
-        assert "localhost-only" in result.output
+        assert "127.0.0.1" in result.output
