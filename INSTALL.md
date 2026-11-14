@@ -60,11 +60,15 @@ does not load or unlock wallets.
 
 The dashboard is read-only and defaults to loopback. To enable the optional
 dual-address mode, configure `GHOSTNODE_DASHBOARD_MODE=localhost_lan`, an
-assigned private `GHOSTNODE_DASHBOARD_LAN_ADDRESS`, and a restrictive
-`GHOSTNODE_DASHBOARD_TOKEN_FILE` in a private environment file. The token file
+assigned private `GHOSTNODE_DASHBOARD_LAN_ADDRESS`, and
+`GHOSTNODE_DASHBOARD_LAN_AUTH_MODE=token_required` (the safe default) with a
+restrictive `GHOSTNODE_DASHBOARD_TOKEN_FILE` in a private environment file. The token file
 must already exist; GhostNode Tools never generates or logs a default password.
 Wildcard, public, multicast, loopback-as-LAN, and IPv6 addresses are rejected.
-Plain HTTP on a LAN does not provide confidentiality. For remote viewing,
+An explicitly reviewed `trusted_lan` mode allows unauthenticated read-only
+access to every reachable LAN client; administrative endpoints still require
+the private token. A specific LAN address is not authentication. Plain HTTP on
+a LAN does not provide confidentiality. For remote viewing,
 localhost mode with an SSH tunnel remains preferred:
 
 ```bash

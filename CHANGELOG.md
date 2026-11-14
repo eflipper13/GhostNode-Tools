@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.3.1
+
+- Added an explicit `trusted_lan` mode for direct, unauthenticated read-only
+  dashboard access on a configured private LAN address.
+- Preserved `token_required` as the default for new LAN configurations.
+- Kept network settings and other administrative endpoints token-protected in
+  `trusted_lan` mode.
+- Added focused regression coverage for LAN modes, persistence, rollback
+  compatibility, and wildcard rejection.
+
+`trusted_lan` is intentionally opt-in: every reachable LAN client can read
+the dashboard, and plain HTTP does not provide confidentiality. Use it only on
+a trusted network; prefer `token_required` or an SSH tunnel otherwise.
+
 ## 0.3.0
 
 - Version-neutral README with a latest-release link.

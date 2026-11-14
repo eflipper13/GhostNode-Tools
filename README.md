@@ -18,7 +18,8 @@ unlocks wallets, or changes node configuration.
 
 No Ghost Core connection is required for M1.
 
-v0.3.0 adds configurable, validated dashboard network access. The portable
+v0.3.1 adds an explicitly reviewed trusted-LAN access option on top of the
+configurable, validated dashboard network access introduced in v0.3.0. The portable
 defaults are `ghost-cli`, `~/.ghost`, and wallet `ghostmain`; they can be
 overridden with command options or environment variables.
 
@@ -69,8 +70,11 @@ python -m pip install --no-build-isolation --no-deps -e .
 The dashboard is read-only and defaults to `127.0.0.1:44678`. It can optionally
 bind exactly one explicitly assigned private LAN IPv4 address in addition to
 localhost. Wildcard, multicast, public, loopback-as-LAN, and IPv6 addresses are
-rejected. LAN mode requires a private bearer token file; there is no default
-password and plain HTTP does not provide confidentiality. Keep LAN access on a
+rejected. LAN mode defaults to `token_required`, using a private bearer token
+file; there is no default password and plain HTTP does not provide
+confidentiality. An explicitly selected `trusted_lan` mode permits
+unauthenticated read-only access to every client that can reach the configured
+private address. Keep LAN access on a
 trusted network or use HTTPS/SSH tunneling as appropriate.
 
 The dashboard groups diagnostics into Blockchain, Network, System, Service,
@@ -138,8 +142,11 @@ sudo systemctl disable ghostnode-dashboard.service
 
 The unit runs as `etcmc`, uses the project `.venv`, and reads dashboard network
 settings from its private environment file. Localhost is the default. To use
-LAN mode, configure a private token file and an explicitly assigned LAN IPv4
-address; never use `0.0.0.0` or expose the dashboard publicly.
+For authenticated LAN mode, configure a private token file and an explicitly
+assigned LAN IPv4 address; never use `0.0.0.0` or expose the dashboard publicly.
+The explicit `trusted_lan` mode is an operator decision and does not protect
+read-only data from reachable LAN clients; administrative endpoints remain
+token-protected.
 
 The intelligence collector unit is separate and is not enabled by default. It
 requires a separate operator review, backup, and migration plan.

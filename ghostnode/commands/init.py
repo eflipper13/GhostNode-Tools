@@ -21,6 +21,8 @@ from ghostnode.network import (NetworkSettings, save_network_settings,
 @click.option("--network", "expected_network", default="main", show_default=True)
 @click.option("--network-mode", type=click.Choice(["localhost", "localhost_lan"]), default="localhost",
               show_default=True)
+@click.option("--lan-auth-mode", type=click.Choice(["token_required", "trusted_lan"]), default="token_required",
+              show_default=True, help="Explicit LAN authentication mode.")
 @click.option("--lan-address", default=None, help="Assigned private LAN IPv4 address for localhost_lan mode.")
 @click.option("--dashboard-port", default=44678, show_default=True, type=int)
 @click.option("--network-config", default=None, help="Private network configuration path.")
@@ -28,16 +30,17 @@ from ghostnode.network import (NetworkSettings, save_network_settings,
 @click.option("--confirm-network", is_flag=True, help="Confirm the explicit network configuration review.")
 def init(as_json: bool, cli_path: str, datadir: str, wallet_name: str,
          wallet_dir: str | None, rpc_host: str | None, rpc_port: int | None,
-         expected_network: str, network_mode: str, lan_address: str | None,
+         expected_network: str, network_mode: str, lan_auth_mode: str, lan_address: str | None,
          dashboard_port: int, network_config: str | None,
          apply_network: bool, confirm_network: bool) -> None:
     """Run the safe, read-only first-run readiness workflow."""
     try:
-        network = validate_network_settings(NetworkSettings(network_mode, lan_address, dashboard_port))
+        network = validate_network_settings(NetworkSettings(network_mode, lan_address, dashboard_port, lan_auth_mode))
     except ValueError as exc:
         raise click.ClickException(str(exc)) from exc
     network_plan = {**network.as_dict(), "restart_required": True, "applied": False,
-                    "security": "token required for localhost_lan"}
+                    "security": ("token required for localhost_lan" if network.lan_auth_mode == "token_required"
+                                  else "trusted LAN: every reachable client can read the dashboard")}
     if apply_network:
         if not confirm_network:
             raise click.ClickException("--apply-network requires --confirm-network after reviewing the plan")

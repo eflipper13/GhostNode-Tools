@@ -11,12 +11,16 @@
 | `GHOSTNODE_DASHBOARD_MODE` | `localhost` | `localhost` or `localhost_lan` |
 | `GHOSTNODE_DASHBOARD_LAN_ADDRESS` | unset | One assigned private LAN IPv4 address; never a wildcard |
 | `GHOSTNODE_DASHBOARD_PORT` | `44678` | Unprivileged dashboard TCP port |
+| `GHOSTNODE_DASHBOARD_LAN_AUTH_MODE` | `token_required` | `token_required` or explicitly reviewed `trusted_lan` |
 | `GHOSTNODE_DASHBOARD_TOKEN_FILE` | unset | Private file containing the LAN bearer token |
 | `GHOSTNODE_NETWORK_CONFIG` | `~/.config/ghostnode-tools/network.json` | Private atomically written non-secret settings |
 
 The dashboard always includes `127.0.0.1`. In `localhost_lan` mode it adds
-exactly the configured assigned private LAN IPv4 address. LAN mode requires a
-bearer token from a private file; there is no default password. Wildcard,
+exactly the configured assigned private LAN IPv4 address. LAN mode defaults to
+`token_required`, requiring a bearer token from a private file; there is no
+default password. Explicit `trusted_lan` permits unauthenticated read-only
+access for reachable LAN clients while administrative endpoints remain
+token-protected. Wildcard,
 multicast, public, loopback-as-LAN, and IPv6 binds are rejected. Network settings
 are validated before listeners start and web proposals never apply changes.
 Never put RPC passwords, cookies, bearer tokens, seeds, or wallet keys in

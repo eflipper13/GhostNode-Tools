@@ -7,9 +7,12 @@ files, and mainnet reports outside the repository.
 
 The dashboard defaults to `127.0.0.1` and localhost mode has no authentication
 because it is loopback-only. Optional LAN mode binds exactly one assigned
-private IPv4 address and requires a bearer token from a private file for every
-request. It rejects wildcard, multicast, public, loopback-as-LAN, and IPv6
-addresses. There is no default password. Plain HTTP on a LAN does not provide
+private IPv4 address. New LAN configurations use `token_required`, which
+requires a bearer token from a private file for every request. An operator may
+explicitly select `trusted_lan` for unauthenticated read-only access, but
+administrative endpoints remain token-protected. It rejects wildcard,
+multicast, public, loopback-as-LAN, and IPv6 addresses. There is no default
+password. Plain HTTP on a LAN does not provide
 confidentiality; use an appropriately secured HTTPS layer or SSH tunnel when
 needed. This document is not a guarantee of security or legal compliance.
 
