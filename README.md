@@ -49,6 +49,13 @@ The command only reads host metrics. JSON always has a top-level `status` (`OK`,
 `WARN`, `ERROR`, or `UNKNOWN`) and `data` object. Errors additionally include
 `message`.
 
+## Installation
+
+For a complete Debian/Ubuntu installation guide, including isolated dependency
+installation, read-only Ghost Core configuration, dashboard access, collector
+review, troubleshooting and safe updates, see
+[docs/INSTALLATION.md](docs/INSTALLATION.md).
+
 ## Tests
 
 ```bash
