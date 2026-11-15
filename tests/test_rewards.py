@@ -17,6 +17,41 @@ def test_attribute_reward_separates_principal_and_reward():
     assert result.completeness == DataCompleteness.COMPLETE
 
 
+def test_attribute_reward_supports_combined_coinstake_principal_output():
+    from ghostnode.intelligence.rewards import attribute_reward
+    result = attribute_reward(
+        [{"prev_txid": "prev", "prev_vout": 0, "value_atomic": 100000000000}],
+        [{"vout": 1, "value_atomic": 100318839195, "principal_value_atomic": 100000000000,
+          "output_class": "principal", "owner_verified": True}],
+    )
+    assert result.principal_return_atomic == 100000000000
+    assert result.wallet_reward_atomic == 318839195
+    assert result.completeness is DataCompleteness.COMPLETE
+
+
+def test_non_monetary_data_output_does_not_block_complete_attribution():
+    from ghostnode.intelligence.rewards import attribute_reward
+    result = attribute_reward(
+        [{"prev_txid": "prev", "prev_vout": 0, "value_atomic": 100000000000}],
+        [{"vout": 0, "value_atomic": None, "output_class": "data", "owner_verified": False},
+         {"vout": 1, "value_atomic": 100318839195, "principal_value_atomic": 100000000000,
+          "output_class": "principal", "owner_verified": True}],
+    )
+    assert result.principal_return_atomic == 100000000000
+    assert result.wallet_reward_atomic == 318839195
+    assert result.completeness is DataCompleteness.COMPLETE
+
+
+def test_unknown_monetary_output_still_blocks_complete_attribution():
+    from ghostnode.intelligence.rewards import attribute_reward
+    result = attribute_reward(
+        [{"prev_txid": "prev", "prev_vout": 0, "value_atomic": 100000000000}],
+        [{"vout": 0, "value_atomic": 100318839195, "output_class": "unknown", "owner_verified": False}],
+    )
+    assert result.wallet_reward_atomic is None
+    assert result.completeness is DataCompleteness.PARTIAL
+
+
 def test_attribute_reward_is_partial_without_prevout_or_ownership():
     from ghostnode.intelligence.rewards import attribute_reward
     missing_input = attribute_reward([{"prev_txid": "prev", "prev_vout": 0}], [])
@@ -43,7 +78,7 @@ def entry(**extra):
 
 
 def test_identifies_matured_wallet_reward():
-    match = identify_reward(block(), [entry(confirmations=100)], 100)
+    match = identify_reward(block(), [entry(confirmations=101)], 100)
     assert match is not None
     assert match.wallet_reward_atomic == 150000000
     assert match.status is RewardStatus.MATURED
@@ -52,11 +87,11 @@ def test_identifies_matured_wallet_reward():
 
 
 def test_wallet_reward_can_be_matured_with_partial_block_economics():
-    match = identify_reward(block().copy(), [entry(confirmations=100)], 100)
+    match = identify_reward(block().copy(), [entry(confirmations=101)], 100)
     assert match.status is RewardStatus.MATURED
     assert match.completeness is DataCompleteness.COMPLETE
     partial = block(blockreward=None)
-    match = identify_reward(partial, [entry(confirmations=100)], 100)
+    match = identify_reward(partial, [entry(confirmations=101)], 100)
     assert match.status is RewardStatus.MATURED
     assert match.completeness is DataCompleteness.PARTIAL
 
@@ -65,6 +100,13 @@ def test_immature_or_orphaned_and_spent_states():
     assert identify_reward(block(), [entry(confirmations=2)], 100).status is RewardStatus.IMMATURE
     assert identify_reward(block(), [entry(category="orphaned_stake")], 100).status is RewardStatus.ORPHANED
     assert identify_reward(block(), [entry(spent=True)], 100).status is RewardStatus.SPENT
+
+
+def test_maturity_boundary_matches_ghost_core_wallet_depth_rule():
+    for confirmations in (99, 100):
+        assert identify_reward(block(), [entry(confirmations=confirmations)], 100).status is RewardStatus.IMMATURE
+    for confirmations in (101, 102):
+        assert identify_reward(block(), [entry(confirmations=confirmations)], 100).status is RewardStatus.MATURED
 
 
 def test_unknown_for_ambiguous_or_incomplete_data():
@@ -76,8 +118,8 @@ def test_unknown_for_ambiguous_or_incomplete_data():
 
 def test_track_reward_is_idempotent_and_keeps_components(tmp_path):
     db = IntelligenceDB(tmp_path / "rewards.sqlite3")
-    assert track_reward(db, block(), [entry(confirmations=100)], maturity_depth=100) is RewardStatus.MATURED
-    assert track_reward(db, block(), [entry(confirmations=100)], maturity_depth=100) is RewardStatus.MATURED
+    assert track_reward(db, block(), [entry(confirmations=101)], maturity_depth=100) is RewardStatus.MATURED
+    assert track_reward(db, block(), [entry(confirmations=101)], maturity_depth=100) is RewardStatus.MATURED
     row = db.connection.execute("SELECT * FROM staking_rewards").fetchone()
     assert db.connection.execute("SELECT count(*) FROM staking_rewards").fetchone()[0] == 1
     assert row["vout"] == 1
@@ -94,13 +136,29 @@ def test_v2_attribution_is_integrated_atomically(tmp_path):
                                    "owner_verified": True},
                                   {"vout": 1, "value": "0.5", "output_class": "wallet_reward",
                                    "owner_verified": True}])
-    assert track_reward(db, value, [entry(reward="0.5", amount="0.5", confirmations=100)], maturity_depth=100) is RewardStatus.MATURED
+    assert track_reward(db, value, [entry(reward="0.5", amount="0.5", confirmations=101)], maturity_depth=100) is RewardStatus.MATURED
     row = db.connection.execute("SELECT wallet_reward_atomic,data_completeness FROM staking_rewards").fetchone()
     assert row[0] == 50000000 and row[1] == "COMPLETE"
     assert db.connection.execute("SELECT count(*) FROM reward_inputs").fetchone()[0] == 1
+
+
+def test_v2_data_output_can_be_complete_but_missing_network_fields_stay_null(tmp_path):
+    db = IntelligenceDB(tmp_path / "data-output.sqlite3")
+    value = block(reward_inputs=[{"prev_txid": "prev", "prev_vout": 0,
+                                 "value_atomic": 100000000000, "owner_verified": True}],
+                  reward_outputs=[{"vout": 0, "value_atomic": None, "output_class": "data",
+                                   "owner_verified": False},
+                                  {"vout": 1, "value_atomic": 100318839195,
+                                   "principal_value_atomic": 100000000000,
+                                   "output_class": "principal", "owner_verified": True}],
+                  stakereward=None, blockreward=None, treasuryreward=None, gvrreward=None)
+    assert track_reward(db, value, [entry(reward="0.5", amount="0.5", confirmations=101)], maturity_depth=100) is RewardStatus.MATURED
+    row = db.connection.execute("SELECT wallet_reward_atomic,data_completeness,block_reward_atomic FROM staking_rewards").fetchone()
+    assert row[0] == 318839195 and row[1] == "COMPLETE" and row[2] is None
+    assert financial_summary(db)["confirmed"] == 318839195
     assert db.connection.execute("SELECT count(*) FROM reward_outputs").fetchone()[0] == 2
     assert db.connection.execute("SELECT count(*) FROM reward_evidence").fetchone()[0] == 1
-    track_reward(db, value, [entry(reward="0.5", amount="0.5", confirmations=100)], maturity_depth=100)
+    track_reward(db, value, [entry(reward="0.5", amount="0.5", confirmations=101)], maturity_depth=100)
     assert db.connection.execute("SELECT count(*) FROM reward_inputs").fetchone()[0] == 1
 
 

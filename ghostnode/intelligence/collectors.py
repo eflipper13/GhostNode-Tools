@@ -22,11 +22,27 @@ MAX_TRANSACTION_PAGES = 20
 
 
 def is_pos_transaction(transaction: Any) -> bool:
-    """Detect Ghost PoS transactions from explicit RPC markers or script opcode."""
+    """Detect explicit markers and Ghost Core's carry-forward PoS format."""
     if not isinstance(transaction, dict):
         return False
     if transaction.get("coinstakeinfo") is not None or transaction.get("is_coinstake") is True:
         return True
+    inputs = transaction.get("vin")
+    outputs = transaction.get("vout")
+    if isinstance(inputs, list) and inputs and isinstance(outputs, list) and outputs:
+        first = outputs[0]
+        if (isinstance(first, dict) and first.get("type") == "data"
+                and "treasury_fund_cfwd" in first and "gvr_fund_cfwd" in first
+                and first.get("value") is None):
+            has_prevout = any(isinstance(item, dict) and isinstance(item.get("txid"), str)
+                              and isinstance(item.get("vout"), int)
+                              and not isinstance(item.get("vout"), bool) for item in inputs)
+            has_monetary_output = any(isinstance(item, dict)
+                                      and isinstance(item.get("value"), (int, float))
+                                      and not isinstance(item.get("value"), bool)
+                                      for item in outputs[1:])
+            if has_prevout and has_monetary_output:
+                return True
     for output in transaction.get("vout", []):
         script = output.get("scriptPubKey") if isinstance(output, dict) else None
         if not isinstance(script, dict):
@@ -340,6 +356,59 @@ def scan_block(db: IntelligenceDB, rpc: RPC, network: str = "main") -> dict[str,
         coinstake = first.get("txid") if is_pos else None
     db.save_block(block, network, is_pos, coinstake)
     return {"height": height, "hash": block_hash, "is_pos": is_pos, "coinstake_txid": coinstake}
+
+
+def recover_block(db: IntelligenceDB, rpc: RPC, height: int, network: str = "main",
+                  wallet_name: str = "ghostmain", maturity_depth: int | None = None,
+                  lock_path: str | None = None, external_lock: bool = False) -> dict[str, Any]:
+    """Reconcile one already-scanned block without moving the chain cursor.
+
+    This is intentionally bounded and idempotent.  It is suitable for an
+    explicitly approved known-block recovery, not for a historical backfill.
+    """
+    block_hash, error = rpc("getblockhash", [height])
+    if error or not isinstance(block_hash, str):
+        return {"status": "UNKNOWN", "height": height, "error": "block hash unavailable"}
+    block = _get_block(rpc, height)
+    if block is None or block.get("hash") != block_hash:
+        return {"status": "UNKNOWN", "height": height, "error": "block validation failed"}
+    txs = block.get("tx")
+    first = txs[0] if isinstance(txs, list) and txs else None
+    if not isinstance(first, dict) or not is_pos_transaction(first):
+        return {"status": "NOT_POS", "height": height, "hash": block_hash}
+    entries, history_status = _list_wallet_transactions(rpc)
+    if entries is None:
+        return {"status": "UNKNOWN", "height": height, "hash": block_hash,
+                "error": "wallet history unavailable"}
+    verified_history_index = build_verified_history_index(entries, rpc, {height: block_hash})
+    reward_block = {key: block[key] for key in
+                    ("stakereward", "blockreward", "treasuryreward", "gvrreward") if key in block}
+    reward_block.update({"hash": block_hash, "height": height, "coinstake": first["txid"],
+                         "reward_source": "getblock+listtransactions+attribution"})
+    try:
+        normalized = normalize_reward_transaction(block, rpc, verified_history_index)
+        if normalized.inputs or normalized.outputs:
+            reward_block.update(normalized.as_v2_fields())
+    except (AssertionError, TypeError, ValueError):
+        pass
+    instance = nullcontext() if external_lock else InstanceLock(str(db.path) + ".lock.instance")
+    writer = nullcontext() if external_lock else CollectorLock(lock_path or str(db.path) + ".lock", blocking=True)
+    with instance:
+        with writer:
+            db.connection.execute("BEGIN IMMEDIATE")
+            try:
+                db._save_block_in_transaction(block, network, True, first["txid"],
+                                              "getblock", advance_state=False)
+                status = _track_reward_in_transaction(
+                    db, reward_block, entries, wallet_name,
+                    maturity_depth or maturity_depth_from_core(),
+                ) if history_status == "COMPLETE" else RewardStatus.UNVERIFIED
+                db.connection.commit()
+            except Exception:
+                db.connection.rollback()
+                raise
+    return {"status": status.value, "height": height, "hash": block_hash,
+            "coinstake_txid": first["txid"], "history_status": history_status}
 
 
 def _get_block(rpc: RPC, height: int) -> dict[str, Any] | None:

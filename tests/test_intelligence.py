@@ -106,6 +106,64 @@ def test_real_ghost_pos_fixture_fragment_is_detected():
     assert is_pos_transaction(block["tx"][0]) is True
 
 
+def test_real_ghost_pos_fixture_1665404_is_detected_from_carry_forward_fields():
+    fixture = Path(__file__).parent / "fixtures" / "ghost_pos_block_1665404.json"
+    block = json.loads(fixture.read_text())
+    assert block["height"] == 1665404
+    assert block["tx"][0]["vout"][0]["type"] == "data"
+    assert "treasury_fund_cfwd" in block["tx"][0]["vout"][0]
+    assert "gvr_fund_cfwd" in block["tx"][0]["vout"][0]
+    assert is_pos_transaction(block["tx"][0]) is True
+
+
+def test_carry_forward_marker_without_prevout_is_not_pos():
+    tx = {"vout": [{"type": "data", "value": None,
+                    "treasury_fund_cfwd": 1, "gvr_fund_cfwd": 1},
+                   {"n": 1, "value": 1}]}
+    assert is_pos_transaction(tx) is False
+
+
+def test_known_block_recovery_is_idempotent_and_does_not_move_cursor(tmp_path):
+    from ghostnode.intelligence.collectors import recover_block
+    fixture = json.loads((Path(__file__).parent / "fixtures/ghost_pos_block_1665404.json").read_text())
+    prev_txid = fixture["tx"][0]["vin"][0]["txid"]
+    prev_blockhash = "a" * 64
+    calls = []
+
+    def rpc(method, args):
+        calls.append(method)
+        if method == "getblockhash":
+            return (prev_blockhash if args == [10] else fixture["hash"]), None
+        if method == "getblock":
+            return fixture, None
+        if method == "listtransactions":
+            return ([{"txid": fixture["tx"][0]["txid"], "blockhash": fixture["hash"],
+                      "category": "stake", "reward": "1003.18839195", "vout": 1,
+                      "confirmations": 73, "blockheight": 1665404},
+                         {"txid": prev_txid, "blockhash": prev_blockhash, "category": "receive",
+                      "amount": "1000", "confirmations": 1000, "blockheight": 10}], None)
+        if method == "gettxout":
+            return None, None
+        if method == "getrawtransaction":
+            return ({"txid": prev_txid, "blockhash": prev_blockhash,
+                     "vout": [{"value": 1000, "scriptPubKey": {"addresses": ["[REDACTED]"]}}]}, None)
+        if method == "getaddressinfo":
+            return ({"ismine": True}, None)
+        raise AssertionError(method)
+
+    db = IntelligenceDB(tmp_path / "recovery.sqlite3")
+    first = recover_block(db, rpc, 1665404)
+    second = recover_block(db, rpc, 1665404)
+    assert first["status"] == "IMMATURE"
+    assert second["status"] == "IMMATURE"
+    assert db.state("main") is None
+    assert db.connection.execute("SELECT is_pos,coinstake_txid FROM chain_blocks").fetchone()[0] == 1
+    assert db.connection.execute("SELECT count(*) FROM staking_events").fetchone()[0] == 1
+    reward = db.connection.execute("SELECT wallet_reward_atomic,data_completeness FROM staking_rewards").fetchone()
+    assert reward[0] == 318839195 and reward[1] == "COMPLETE"
+    assert "getblockreward" not in calls
+
+
 def test_real_ghost_pos_fixture_is_explicitly_only_a_fragment():
     fixture = Path(__file__).parent / "fixtures" / "ghost_pos_block_1658462_fragment.json"
     block = json.loads(fixture.read_text())
