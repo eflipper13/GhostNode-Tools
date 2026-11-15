@@ -162,6 +162,101 @@ def test_v2_data_output_can_be_complete_but_missing_network_fields_stay_null(tmp
     assert db.connection.execute("SELECT count(*) FROM reward_inputs").fetchone()[0] == 1
 
 
+def test_v2_atomic_values_round_trip_without_double_scaling(tmp_path):
+    db = IntelligenceDB(tmp_path / "atomic-v2.sqlite3")
+    value = block(
+        reward_inputs=[{"prev_txid": "prev", "prev_vout": 0,
+                        "value_atomic": 100_000_000_000, "owner_verified": True}],
+        reward_outputs=[
+            {"vout": 0, "value_atomic": None, "output_class": "data", "owner_verified": False},
+            {"vout": 1, "value_atomic": 100_318_839_195,
+             "principal_value_atomic": 100_000_000_000,
+             "output_class": "principal", "owner_verified": True},
+        ],
+        stakereward=None, blockreward=None, treasuryreward=None, gvrreward=None,
+    )
+    assert track_reward(
+        db, value, [entry(reward="3.18839195", amount="3.18839195", confirmations=101)],
+        maturity_depth=100,
+    ) is RewardStatus.MATURED
+    assert db.connection.execute("SELECT value_atomic FROM reward_inputs").fetchone()[0] == 100_000_000_000
+    outputs = db.connection.execute(
+        "SELECT vout,value_atomic,output_class FROM reward_outputs ORDER BY vout"
+    ).fetchall()
+    assert outputs[0][1] is None and outputs[0][2] == "data"
+    assert outputs[1][1] == 100_318_839_195 and outputs[1][2] == "principal"
+    reward = db.connection.execute(
+        "SELECT wallet_reward_atomic,data_completeness FROM staking_rewards"
+    ).fetchone()
+    assert reward[0] == 318_839_195 and reward[1] == "COMPLETE"
+    assert financial_summary(db)["confirmed"] == 318_839_195
+
+
+def test_missing_persisted_atomic_input_blocks_complete_income(tmp_path):
+    db = IntelligenceDB(tmp_path / "missing-atomic.sqlite3")
+    value = block(
+        reward_inputs=[{"prev_txid": "prev", "prev_vout": 0,
+                        "value_atomic": None, "owner_verified": True}],
+        reward_outputs=[{"vout": 1, "value_atomic": 100_318_839_195,
+                         "principal_value_atomic": 100_000_000_000,
+                         "output_class": "principal", "owner_verified": True}],
+    )
+    assert track_reward(
+        db, value, [entry(confirmations=101)], maturity_depth=100,
+    ) is RewardStatus.UNVERIFIED
+    reward = db.connection.execute(
+        "SELECT wallet_reward_atomic,data_completeness FROM staking_rewards"
+    ).fetchone()
+    assert reward[0] is None and reward[1] == "PARTIAL"
+    assert financial_summary(db)["confirmed"] == 0
+
+
+def test_missing_persisted_atomic_output_blocks_complete_income(tmp_path):
+    db = IntelligenceDB(tmp_path / "missing-atomic-output.sqlite3")
+    value = block(
+        reward_inputs=[{"prev_txid": "prev", "prev_vout": 0,
+                        "value_atomic": 100_000_000_000, "owner_verified": True}],
+        reward_outputs=[{"vout": 1, "value_atomic": None,
+                         "principal_value_atomic": 100_000_000_000,
+                         "output_class": "principal", "owner_verified": True}],
+    )
+    assert track_reward(
+        db, value, [entry(confirmations=101)], maturity_depth=100,
+    ) is RewardStatus.UNVERIFIED
+    reward = db.connection.execute(
+        "SELECT wallet_reward_atomic,data_completeness FROM staking_rewards"
+    ).fetchone()
+    assert reward[0] is None and reward[1] == "PARTIAL"
+    assert financial_summary(db)["confirmed"] == 0
+
+
+def test_existing_corrupt_evidence_is_reconciled_on_retry(tmp_path):
+    db = IntelligenceDB(tmp_path / "repair-retry.sqlite3")
+    value = block(
+        reward_inputs=[{"prev_txid": "prev", "prev_vout": 0,
+                        "value_atomic": 100_000_000_000, "owner_verified": True}],
+        reward_outputs=[
+            {"vout": 0, "value_atomic": None, "output_class": "data", "owner_verified": False},
+            {"vout": 1, "value_atomic": 100_318_839_195,
+             "principal_value_atomic": 100_000_000_000,
+             "output_class": "principal", "owner_verified": True},
+        ],
+        stakereward=None, blockreward=None, treasuryreward=None, gvrreward=None,
+    )
+    wallet = [entry(reward="3.18839195", amount="3.18839195", confirmations=101)]
+    assert track_reward(db, value, wallet, maturity_depth=100) is RewardStatus.MATURED
+    db.connection.execute("UPDATE reward_inputs SET value_atomic=NULL")
+    db.connection.execute("UPDATE reward_outputs SET value_atomic=NULL")
+    db.connection.commit()
+    assert track_reward(db, value, wallet, maturity_depth=100) is RewardStatus.MATURED
+    assert db.connection.execute("SELECT value_atomic FROM reward_inputs").fetchone()[0] == 100_000_000_000
+    assert db.connection.execute(
+        "SELECT value_atomic FROM reward_outputs WHERE vout=1"
+    ).fetchone()[0] == 100_318_839_195
+    assert db.connection.execute("SELECT count(*) FROM staking_rewards").fetchone()[0] == 1
+    assert db.connection.execute("SELECT count(*) FROM staking_events").fetchone()[0] == 1
+
+
 def test_v2_partial_attribution_is_not_confirmed_income(tmp_path):
     db = IntelligenceDB(tmp_path / "partial.sqlite3")
     value = block(reward_inputs=[{"prev_txid": "prev", "prev_vout": 0}],

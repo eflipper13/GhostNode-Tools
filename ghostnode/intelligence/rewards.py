@@ -127,6 +127,67 @@ def _atomic_field(item: dict[str, Any]) -> int | None:
     return _atomic(item.get("value"))
 
 
+def _persisted_atomic_field(item: dict[str, Any]) -> int | None:
+    """Convert an input field for SQLite without double-scaling atomic units."""
+    if "value_atomic" in item:
+        return _atomic_integer(item.get("value_atomic"))
+    return _atomic(item.get("value"))
+
+
+def _persisted_evidence_complete(inputs: Any, outputs: Any,
+                                 attribution: RewardAttribution) -> bool:
+    """Validate the exact V2-shaped values that will be written to SQLite."""
+    if attribution.completeness is not DataCompleteness.COMPLETE or not attribution.ownership_verified:
+        return False
+    if not isinstance(inputs, list) or not inputs or not isinstance(outputs, list) or not outputs:
+        return False
+    input_values: list[int] = []
+    input_refs: set[tuple[str, int]] = set()
+    for item in inputs:
+        if not isinstance(item, dict):
+            return False
+        value = _persisted_atomic_field(item)
+        txid, vout = item.get("prev_txid"), item.get("prev_vout")
+        if (value is None or not isinstance(txid, str) or not txid
+                or isinstance(vout, bool) or not isinstance(vout, int) or vout < 0
+                or (txid, vout) in input_refs
+                or item.get("owner_verified") is not True):
+            return False
+        input_refs.add((txid, vout))
+        input_values.append(value)
+    output_refs: set[int] = set()
+    monetary_values: list[tuple[dict[str, Any], int]] = []
+    for item in outputs:
+        if not isinstance(item, dict):
+            return False
+        vout = item.get("vout")
+        output_class = item.get("output_class")
+        if isinstance(vout, bool) or not isinstance(vout, int) or vout < 0 or vout in output_refs:
+            return False
+        output_refs.add(vout)
+        value = _persisted_atomic_field(item)
+        if output_class == "data":
+            if value is not None or item.get("owner_verified") is True:
+                return False
+            continue
+        if output_class not in {"principal", "wallet_reward"} or value is None:
+            return False
+        if item.get("owner_verified") is not True:
+            return False
+        monetary_values.append((item, value))
+    if not monetary_values:
+        return False
+    if sum(input_values) != attribution.input_value_atomic:
+        return False
+    principal = attribution.principal_return_atomic
+    reward = attribution.wallet_reward_atomic
+    if (principal is None or reward is None or principal < 0 or reward < 0
+            or principal > sum(input_values)):
+        return False
+    owned_total = sum(value for item, value in monetary_values if item.get("owner_verified") is True)
+    return owned_total - principal == reward
+
+
 def _status(entry: dict[str, Any], maturity_depth: int | None) -> RewardStatus:
     if entry.get("orphaned") is True or entry.get("category") == "orphaned_stake":
         return RewardStatus.ORPHANED
@@ -186,6 +247,12 @@ def _track_reward_in_transaction(db: IntelligenceDB, block: dict[str, Any],
         return RewardStatus.UNVERIFIED
     has_v2_data = "reward_inputs" in block and "reward_outputs" in block
     attribution = attribute_reward(block.get("reward_inputs"), block.get("reward_outputs")) if has_v2_data else None
+    if attribution is not None and not _persisted_evidence_complete(
+            block.get("reward_inputs"), block.get("reward_outputs"), attribution):
+        attribution = RewardAttribution(
+            attribution.input_value_atomic, None, None, None,
+            DataCompleteness.PARTIAL, False,
+        )
     wallet_amount = attribution.wallet_reward_atomic if attribution else match.wallet_reward_atomic
     status = match.status if attribution is None or attribution.completeness is DataCompleteness.COMPLETE else RewardStatus.UNVERIFIED
     completeness = attribution.completeness if attribution else match.completeness
@@ -234,7 +301,7 @@ def _track_reward_in_transaction(db: IntelligenceDB, block: dict[str, Any],
             db.connection.execute(
                 "INSERT OR REPLACE INTO reward_inputs(reward_id,prev_txid,prev_vout,value_atomic,ownership_status,source_rpc,completeness) VALUES(?,?,?,?,?,?,?)",
                 (reward_id, item.get("prev_txid", "unknown"), item.get("prev_vout", -1),
-                 _atomic(item.get("value_atomic", item.get("value"))),
+                 _persisted_atomic_field(item),
                  "CONFIRMED" if item.get("owner_verified") is True else "UNKNOWN",
                  item.get("source_rpc", "gettransaction"), attribution.completeness.value),
             )
@@ -243,7 +310,7 @@ def _track_reward_in_transaction(db: IntelligenceDB, block: dict[str, Any],
                 continue
             db.connection.execute(
                 "INSERT OR REPLACE INTO reward_outputs(reward_id,vout,value_atomic,output_class,ownership_status,source_rpc,completeness) VALUES(?,?,?,?,?,?,?)",
-                (reward_id, item.get("vout", -1), _atomic(item.get("value_atomic", item.get("value"))),
+                (reward_id, item.get("vout", -1), _persisted_atomic_field(item),
                  item.get("output_class", "unknown"),
                  "CONFIRMED" if item.get("owner_verified") is True else "UNKNOWN",
                  item.get("source_rpc", "wallet-rpc"), attribution.completeness.value),
