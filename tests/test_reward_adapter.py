@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from ghostnode.intelligence.reward_adapter import EvidenceStatus, OwnershipStatus, normalize_reward_transaction
+from ghostnode.intelligence.rewards import DataCompleteness
 
 
 FIXTURE = json.loads((Path(__file__).parent / "fixtures/ghost_pos_block_1658759.json").read_text())
@@ -94,3 +95,28 @@ def test_txid_mismatch_is_not_accepted():
 
     result = normalize_reward_transaction(block, rpc)
     assert result.inputs[0].confidence is EvidenceStatus.UNKNOWN
+
+
+def test_real_ghost_1665404_combined_output_yields_exact_wallet_reward():
+    fixture = json.loads((Path(__file__).parent / "fixtures/ghost_pos_block_1665404.json").read_text())
+    prev_txid = fixture["tx"][0]["vin"][0]["txid"]
+    address = "[REDACTED]"
+
+    def rpc(method, args):
+        if method == "gettxout":
+            return None, None
+        if method == "getrawtransaction":
+            return ({"txid": prev_txid, "blockhash": PREV_BLOCK,
+                     "vout": [{"value": 1000, "scriptPubKey": {"addresses": [address]}}]}, None)
+        if method == "getaddressinfo":
+            return ({"ismine": True}, None)
+        raise AssertionError(method)
+
+    result = normalize_reward_transaction(fixture, rpc, {prev_txid: PREV_BLOCK})
+    assert result.status is EvidenceStatus.VERIFIED
+    assert result.attribution.input_value_atomic == 100000000000
+    assert result.attribution.wallet_reward_atomic == 318839195
+    assert result.attribution.principal_return_atomic == 100000000000
+    assert result.outputs[0].output_class == "data"
+    assert result.outputs[0].value_atomic is None
+    assert result.attribution.completeness is DataCompleteness.COMPLETE

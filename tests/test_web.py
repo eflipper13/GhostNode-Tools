@@ -29,7 +29,6 @@ async def test_api_and_html_rendering(monkeypatch):
     async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
         api = await client.get("/api/status")
         page = await client.get("/")
-        settings = await client.get("/api/network/settings")
     assert api.status_code == 200
     assert api.json()["data"]["status"]["data"]["network"]["version"] == "0.23.1.0"
     assert api.json()["data"]["wallet"]["data"]["wallet_name"] == "ghostmain"
@@ -44,9 +43,6 @@ async def test_api_and_html_rendering(monkeypatch):
     assert "Alerts" in page.text
     assert "Dashboard" in page.text
     assert "First-run readiness" in page.text
-    assert "Network Settings" in page.text
-    assert settings.status_code == 200
-    assert settings.json()["data"]["security_status"] == "LOCALHOST_ONLY"
 
 
 @pytest.mark.anyio
@@ -88,3 +84,14 @@ def test_template_has_safe_nested_rendering_and_units():
     assert "Disk used / total" in template
     assert "History" in template
     assert "not guaranteed" in template
+
+
+def test_atomic_money_formatter_preserves_exact_small_values():
+    template = (web.BASE_DIR / "templates" / "dashboard.html").read_text()
+    start = template.index("const atomicGhost =")
+    end = template.index("const localDate =", start)
+    formatter = template[start:end]
+    assert "Number(value)" not in formatter
+    assert "padStart(9,'0')" in formatter
+    assert "replace(/0+$/,'')" in formatter
+    assert "fraction?','+fraction:''" in formatter

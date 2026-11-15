@@ -1,0 +1,36 @@
+{
+  "hash": "94803479af71ec9c120d694622097f310e577722856a34f195d1b572390b6d0e",
+  "height": 1665404,
+  "tx": [
+    {
+      "txid": "65934ce1f8cfceacc04b431e70f8292b8c3ea17518f307c07a6f448b1aeee94f",
+      "vin": [
+        {
+          "txid": "319f0e7f240de071b534ee566cba61708cf23a3dd4ed69797dd493a3674314e0",
+          "vout": 0
+        }
+      ],
+      "vout": [
+        {
+          "n": 0,
+          "type": "data",
+          "value": null,
+          "valueSat": null,
+          "treasury_fund_cfwd": 3207.4812,
+          "gvr_fund_cfwd": 2.2869
+        },
+        {
+          "n": 1,
+          "type": "standard",
+          "value": 1003.18839195,
+          "valueSat": 100318839195,
+          "scriptPubKey": {
+            "type": "pubkeyhash",
+            "asm": "OP_DUP OP_HASH160 [REDACTED] OP_EQUALVERIFY OP_CHECKSIG",
+            "addresses": ["[REDACTED]"]
+          }
+        }
+      ]
+    }
+  ]
+}
