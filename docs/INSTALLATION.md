@@ -58,6 +58,11 @@ not assume an archive asset exists if it is not listed on the release page.
 Do not copy a Ghost Core datadir, wallet files, cookie files, SQLite database,
 or private configuration into this source directory.
 
+The public installation does not include the private Donations observer,
+private dashboard wrapper, wallet-monitoring data, or production environment.
+Those are local-only deployment extensions and must remain outside this source
+tree and outside public release archives.
+
 The public release tag is v0.3.2. The current Python package metadata and CLI
 version string may still report 0.3.1; this does not change the tag or source
 being installed and is a packaging metadata limitation to be resolved in a

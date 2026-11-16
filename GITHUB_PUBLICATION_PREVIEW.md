@@ -1,4 +1,7 @@
-# GitHub publication preview
+# Historical GitHub publication preview — v0.2.0
+
+> This file records the v0.2.0 publication plan. It is retained as history and
+> is not the current release description. The current public release is v0.3.2.
 
 Repository owner: `eflipper13`
 Repository name: `GhostNode-Tools`
@@ -9,12 +12,12 @@ intelligence tools for Python 3.11.
 Topics: `ghost`, `blockchain`, `node-monitoring`, `staking`, `python`,
 `open-source`
 
-Visibility: public (planned only; not configured here).
+Visibility: public; the repository is now published.
 
 License: MIT
 
-Release assets: prepared locally for this release; publication remains a
-separate owner-approved step.
+Release assets and publication were completed separately; this file is not the
+source of truth for current release assets.
 
 Topics: `ghost`, `ghost-core`, `blockchain`, `node-monitoring`, `staking`,
 `python`, `open-source`

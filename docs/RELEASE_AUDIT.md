@@ -1,4 +1,8 @@
-# GhostNode Tools — Open Source Release Candidate v0.1
+# Historical release audit — GhostNode Tools v0.1
+
+> This is a historical v0.1 audit record. It is retained for provenance and is
+> not the current release status. See the v0.3.2 documentation for current
+> installation, security, network, and reward behavior.
 
 Status: **READY FOR PUBLICATION**
 
