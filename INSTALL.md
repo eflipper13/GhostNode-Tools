@@ -1,14 +1,15 @@
 # Installation
 
 This guide describes an isolated Debian 12 installation for GhostNode Tools
-v0.3.0. It does not install a systemd unit, modify Ghost Core, unlock a wallet,
+v0.3.2. It does not install a systemd unit, modify Ghost Core, unlock a wallet,
 or create transactions.
 
 ## Requirements
 
 - Debian 12 with Python 3.11 and `python3.11-venv` available;
 - a local Ghost Core installation and its read-only `ghost-cli`;
-- access to the release archive and its published SHA256 checksum.
+- access to the v0.3.2 Git tag, or a release archive and its published SHA256
+  checksum when an archive is provided.
 
 ## Verify and install
 
@@ -17,9 +18,9 @@ Do not copy a production `.cookie`, `ghost.conf`, wallet file, SQLite database,
 or secret into the release tree.
 
 ```bash
-sha256sum -c GhostNode-Tools-v0.3.0.tar.gz.sha256
+sha256sum -c GhostNode-Tools-v0.3.2.tar.gz.sha256
 mkdir -p "$HOME/ghostnode-tools"
-tar -xzf GhostNode-Tools-v0.3.0.tar.gz -C "$HOME/ghostnode-tools" --strip-components=1
+tar -xzf GhostNode-Tools-v0.3.2.tar.gz -C "$HOME/ghostnode-tools" --strip-components=1
 cd "$HOME/ghostnode-tools"
 python3.11 -m venv .venv
 . .venv/bin/activate
@@ -33,9 +34,10 @@ The checksum file must come from the same trusted release channel as the
 archive. Do not invent or skip hashes. No command above uses `sudo` or changes
 system-wide Python packages.
 
-The stable archive and checksum are local release artifacts. Publication is a
-separate owner-approved step. The checksum file is kept beside the archive when running
-`sha256sum -c`.
+The v0.3.2 Git tag is the canonical source reference. Use the archive commands
+only when the matching archive and checksum are supplied through a trusted
+release channel. The checksum file must be kept beside the archive when
+running `sha256sum -c`.
 
 ## Local configuration
 
@@ -78,6 +80,11 @@ ssh -N -L 44678:127.0.0.1:44678 user@node
 Inspect `CONFIGURATION.md` and `SECURITY.md` before connecting any live node.
 Collector operation is a separate, reviewed step and is not started by this
 installation guide.
+
+The private Donations observer and dashboard wrapper are not part of the public
+installation. If a local deployment has those extensions, keep their code,
+configuration, wallet-related data, and SQLite database outside this source
+tree and outside public release artifacts.
 
 ## Stop and remove
 

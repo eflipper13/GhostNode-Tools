@@ -1,5 +1,10 @@
 # GhostNode Tools v0.2.0 roadmap
 
+> Historical roadmap. M1–M3 are implemented in the v0.2.0 development history;
+> this file is retained for project provenance. Current installation and
+> security guidance is maintained in `docs/INSTALLATION.md`, `SECURITY.md`, and
+> `AGENTS.md`.
+
 The v0.2.0 development line begins with M1: Ghost Core detection and a guided
 setup assistant. M1 and M2 are diagnostic and planning-only. They do not install
 Ghost Core, write configuration, change permissions, create services, or change

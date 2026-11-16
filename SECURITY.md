@@ -34,3 +34,8 @@ wallet path only when filesystem metadata identifies a supported location.
 Treat that output as local operator information. Remote RPC paths, ambiguous
 layouts, and unsupported wallet formats remain `WALLET_PATH_UNKNOWN`; the
 first-run report redacts local paths. The tool never opens wallet databases.
+
+The public release contains no Donations observer, private dashboard wrapper,
+production SQLite, wallet data, or host-specific monitoring extension. Such
+features are local-only deployment components and must remain outside the
+public repository and release artifacts.

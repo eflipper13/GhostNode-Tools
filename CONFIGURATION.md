@@ -25,3 +25,6 @@ multicast, public, loopback-as-LAN, and IPv6 binds are rejected. Network setting
 are validated before listeners start and web proposals never apply changes.
 Never put RPC passwords, cookies, bearer tokens, seeds, or wallet keys in
 repository files or command-line arguments.
+
+Private environment files, token files, production database paths, and
+local-only Donations configuration belong outside the public source tree.

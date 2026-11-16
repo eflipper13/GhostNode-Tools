@@ -18,7 +18,7 @@ unlocks wallets, or changes node configuration.
 
 No Ghost Core connection is required for M1.
 
-v0.3.1 adds an explicitly reviewed trusted-LAN access option on top of the
+v0.3.2 includes the reviewed trusted-LAN access option on top of the
 configurable, validated dashboard network access introduced in v0.3.0. The portable
 defaults are `ghost-cli`, `~/.ghost`, and wallet `ghostmain`; they can be
 overridden with command options or environment variables.
@@ -123,13 +123,17 @@ The runner is available as `python -m ghostnode collector`. It uses one shared
 process lock, a 60-second bounded block scan and a 15-minute snapshot schedule.
 `--check` performs only the read-only RPC preflight and does not open or create
 the SQLite database. `--once` runs one snapshot and one bounded scanner batch.
-The runner is not installed or enabled as a systemd service by this change.
+The public release provides the runner and unit templates; installing or
+enabling a systemd service remains an explicit operator action. A production
+deployment may use a private unit and private environment outside this tree.
 
 Staking Intelligence calculates wallet share and statistical probabilities from
 the node's current `expectedtime`. These are estimates, not guarantees or APY.
-Historical blocks, rewards and difficulty series are shown as unavailable
-because the current read-only RPC set does not expose historical data. No
-synthetic history is generated.
+Historical backfill is not automatic. Current-chain PoS blocks can be recorded
+with conservative wallet reward attribution when the required evidence is
+available; missing or ambiguous evidence remains `PARTIAL`/`UNKNOWN`, and
+network-wide reward components that require unavailable data remain `NULL`.
+No synthetic history is generated.
 
 ## systemd deployment (manual)
 
@@ -198,3 +202,11 @@ GHOST donations are welcome.
 GHOST donation address: GZKRMKqiHp6WsVy9DsNAD9arSSK66Pv5Hv
 
 Donations are entirely optional. All features remain free.
+
+## Private local-only integrations
+
+The public project does not contain the private Donations observer, private
+dashboard wrapper, private wallet-monitoring data, or production environment
+files. Those extensions may exist in a separately managed local deployment,
+but must remain outside this repository, public archives, pull requests, and
+release assets.

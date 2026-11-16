@@ -1,4 +1,4 @@
-# GhostNode Tools v0.3.0 network access
+# GhostNode Tools v0.3.x network access
 
 The dashboard is localhost-only by default:
 

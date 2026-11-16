@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.2
+
+- Corrected Ghost-specific PoS block detection and exact atomic-unit reward
+  accounting.
+- Added conservative historical prevout and wallet-ownership evidence handling.
+- Corrected PoS reward maturity to 101 confirmations when
+  `COINBASE_MATURITY=100`.
+- Preserved `NULL`/`PARTIAL`/`UNKNOWN` states for incomplete network-wide data;
+  incomplete evidence cannot increase confirmed income.
+- Added idempotent reward persistence, reorg-safe handling, and focused
+  regression coverage for the reward pipeline.
+- Added public Debian/Ubuntu installation documentation.
+
 ## 0.3.1
 
 - Added an explicit `trusted_lan` mode for direct, unauthenticated read-only
