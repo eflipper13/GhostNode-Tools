@@ -120,3 +120,223 @@ def test_real_ghost_1665404_combined_output_yields_exact_wallet_reward():
     assert result.outputs[0].output_class == "data"
     assert result.outputs[0].value_atomic is None
     assert result.attribution.completeness is DataCompleteness.COMPLETE
+
+
+def test_duplicate_prevouts_and_addresses_use_block_scoped_rpc_cache():
+    prev_tx = "a" * 64
+    block = {
+        "hash": "b",
+        "height": 10,
+        "tx": [{
+            "txid": "c" * 64,
+            "vin": [{"txid": prev_tx, "vout": 0}, {"txid": prev_tx, "vout": 0}],
+            "vout": [
+                {"n": 0, "value": 10, "scriptPubKey": {"addresses": ["mine"]}},
+                {"n": 1, "value": 1, "scriptPubKey": {"addresses": ["mine"]}},
+            ],
+        }],
+    }
+    calls = []
+
+    def rpc(method, args):
+        calls.append((method, args))
+        if method == "gettxout":
+            return {"value": 10, "scriptPubKey": {"addresses": ["mine"]}}, None
+        if method == "getaddressinfo":
+            return {"ismine": True}, None
+        raise AssertionError(method)
+
+    result = normalize_reward_transaction(block, rpc)
+
+    assert [method for method, _ in calls].count("gettxout") == 1
+    assert [method for method, _ in calls].count("getaddressinfo") == 1
+    assert [method for method, _ in calls].count("getrawtransaction") == 0
+    assert len(calls) == 2
+    assert len(result.inputs) == 2
+    assert all(item.value_atomic == 1_000_000_000 for item in result.inputs)
+
+
+def test_unique_prevouts_and_addresses_are_not_deduplicated():
+    block = {
+        "tx": [{
+            "txid": "t",
+            "vin": [
+                {"txid": "a" * 64, "vout": 0},
+                {"txid": "b" * 64, "vout": 1},
+            ],
+            "vout": [
+                {"n": 0, "value": 10, "scriptPubKey": {"addresses": ["mine-a"]}},
+                {"n": 1, "value": 10, "scriptPubKey": {"addresses": ["mine-b"]}},
+            ],
+        }],
+    }
+    calls = []
+
+    def rpc(method, args):
+        calls.append((method, args))
+        if method == "gettxout":
+            return {"value": 10, "scriptPubKey": {"addresses": [f"mine-{len(calls)}"]}}, None
+        if method == "getaddressinfo":
+            return {"ismine": True}, None
+        raise AssertionError(method)
+
+    normalize_reward_transaction(block, rpc)
+
+    assert [method for method, _ in calls].count("gettxout") == 2
+    assert [method for method, _ in calls].count("getaddressinfo") >= 2
+
+
+def test_cache_isolated_between_normalization_calls():
+    prev_tx = "a" * 64
+    block = {"tx": [{
+        "txid": "t",
+        "vin": [{"txid": prev_tx, "vout": 0}],
+        "vout": [{"n": 0, "value": 10, "scriptPubKey": {"addresses": ["mine"]}}],
+    }]}
+    calls = []
+
+    def rpc(method, args):
+        calls.append((method, args))
+        if method == "gettxout":
+            return {"value": 10, "scriptPubKey": {"addresses": ["mine"]}}, None
+        if method == "getaddressinfo":
+            return {"ismine": True}, None
+        raise AssertionError(method)
+
+    normalize_reward_transaction(block, rpc)
+    normalize_reward_transaction(block, rpc)
+
+    assert [method for method, _ in calls].count("gettxout") == 2
+    assert [method for method, _ in calls].count("getaddressinfo") == 2
+
+
+def test_duplicate_historical_prevout_reuses_verified_transaction():
+    prev_tx = "a" * 64
+    prev_block = "b" * 64
+    block = {"tx": [{
+        "txid": "t",
+        "vin": [{"txid": prev_tx, "vout": 0}, {"txid": prev_tx, "vout": 0}],
+        "vout": [{"n": 0, "value": 10, "scriptPubKey": {"addresses": ["external"]}}],
+    }]}
+    calls = []
+
+    def rpc(method, args):
+        calls.append((method, args))
+        if method == "gettxout":
+            return None, None
+        if method == "getrawtransaction":
+            return {"txid": prev_tx, "blockhash": prev_block,
+                    "vout": [{"value": 10, "scriptPubKey": {"addresses": ["external"]}}]}, None
+        if method == "getaddressinfo":
+            return {"ismine": False}, None
+        raise AssertionError(method)
+
+    result = normalize_reward_transaction(block, rpc, {prev_tx: prev_block})
+
+    assert [method for method, _ in calls].count("gettxout") == 1
+    assert [method for method, _ in calls].count("getrawtransaction") == 1
+    assert [method for method, _ in calls].count("getaddressinfo") == 1
+    assert all(item.value_atomic == 1_000_000_000 for item in result.inputs)
+
+
+def test_ambiguous_address_result_remains_unknown():
+    block = {"tx": [{
+        "txid": "t",
+        "vin": [],
+        "vout": [
+            {"n": 0, "value": 10, "scriptPubKey": {"addresses": ["ambiguous"]}},
+            {"n": 1, "value": 10, "scriptPubKey": {"addresses": ["ambiguous"]}},
+        ],
+    }]}
+    calls = []
+
+    def rpc(method, args):
+        calls.append((method, args))
+        if method == "gettxout":
+            return {"value": 10, "scriptPubKey": {"addresses": ["ambiguous"]}}, None
+        if method == "getaddressinfo":
+            return {"ismine": None, "solvable": None}, None
+        raise AssertionError(method)
+
+    result = normalize_reward_transaction(block, rpc)
+
+    assert [method for method, _ in calls].count("getaddressinfo") == 2
+    assert all(output.ownership_status is OwnershipStatus.UNKNOWN for output in result.outputs)
+
+
+def test_transient_address_error_is_retried_and_not_cached():
+    block = {"tx": [{
+        "txid": "t",
+        "vin": [],
+        "vout": [
+            {"n": 0, "value": 10, "scriptPubKey": {"addresses": ["recovering"]}},
+            {"n": 1, "value": 10, "scriptPubKey": {"addresses": ["recovering"]}},
+        ],
+    }]}
+    calls = []
+    address_results = iter((("RPC temporary failure", True), ({"ismine": False}, False)))
+
+    def rpc(method, args):
+        calls.append((method, args))
+        if method == "gettxout":
+            return {"value": 10, "scriptPubKey": {"addresses": ["recovering"]}}, None
+        if method == "getaddressinfo":
+            result, is_error = next(address_results)
+            return (None, result) if is_error else (result, None)
+        raise AssertionError(method)
+
+    result = normalize_reward_transaction(block, rpc)
+
+    assert [method for method, _ in calls].count("getaddressinfo") == 2
+    assert result.outputs[0].ownership_status is OwnershipStatus.UNKNOWN
+    assert result.outputs[1].ownership_status is OwnershipStatus.NOT_OWNED
+
+
+def test_malformed_invalid_prevout_is_retried_not_cached():
+    prev_tx = "a" * 64
+    block = {"tx": [{
+        "txid": "t",
+        "vin": [{"txid": prev_tx, "vout": 0}, {"txid": prev_tx, "vout": 0}],
+        "vout": [],
+    }]}
+    calls = []
+    malformed = {"value": -1, "scriptPubKey": {"addresses": []}}
+
+    def rpc(method, args):
+        calls.append((method, args))
+        if method == "gettxout":
+            return malformed, None
+        raise AssertionError(method)
+
+    result = normalize_reward_transaction(block, rpc)
+
+    assert [method for method, _ in calls].count("gettxout") == 2
+    assert all(item.value_atomic is None for item in result.inputs)
+    assert all(item.ownership_status is OwnershipStatus.UNKNOWN for item in result.inputs)
+
+
+def test_distinct_verified_block_context_hashes_do_not_share_prevout_cache():
+    prev_tx = "a" * 64
+    block = {"tx": [{
+        "txid": "t",
+        "vin": [{"txid": prev_tx, "vout": 0}],
+        "vout": [],
+    }]}
+    calls = []
+
+    def rpc(method, args):
+        calls.append((method, args))
+        if method == "gettxout":
+            return None, None
+        if method == "getrawtransaction":
+            blockhash = args[2]
+            return {"txid": prev_tx, "blockhash": blockhash,
+                    "vout": [{"value": 10 if blockhash == "b" * 64 else 20}]}, None
+        raise AssertionError(method)
+
+    first = normalize_reward_transaction(block, rpc, {prev_tx: "b" * 64})
+    second = normalize_reward_transaction(block, rpc, {prev_tx: "c" * 64})
+
+    assert [method for method, _ in calls].count("getrawtransaction") == 2
+    assert first.inputs[0].value_atomic == 1_000_000_000
+    assert second.inputs[0].value_atomic == 2_000_000_000

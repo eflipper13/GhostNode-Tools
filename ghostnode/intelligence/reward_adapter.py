@@ -127,25 +127,46 @@ def _addresses(script: dict[str, Any] | None, key: str) -> tuple[str, ...]:
     return tuple(value for value in values if isinstance(value, str)) if isinstance(values, list) else ()
 
 
-def _ownership(rpc: RPC, addresses: tuple[str, ...]) -> tuple[OwnershipStatus, str | None]:
+def _ownership(rpc: RPC, addresses: tuple[str, ...],
+               address_cache: dict[str, tuple[OwnershipStatus, str | None]] | None = None) -> tuple[OwnershipStatus, str | None]:
     if not addresses:
         return OwnershipStatus.UNKNOWN, None
     saw_unknown = False
     for address in addresses:
-        info, error = rpc("getaddressinfo", [address])
-        if error or not isinstance(info, dict):
-            saw_unknown = True
-            continue
-        if info.get("ismine") is True:
-            return OwnershipStatus.CONFIRMED, "getaddressinfo.ismine"
-        if info.get("ismine") is False:
-            continue
-        saw_unknown = True
+        cached = address_cache.get(address) if address_cache is not None else None
+        if cached is not None:
+            status, source = cached
+        else:
+            info, error = rpc("getaddressinfo", [address])
+            if error or not isinstance(info, dict):
+                saw_unknown = True
+                continue
+            if info.get("ismine") is True:
+                status, source = OwnershipStatus.CONFIRMED, "getaddressinfo.ismine"
+                if address_cache is not None:
+                    address_cache[address] = (status, source)
+            elif info.get("ismine") is False:
+                status, source = OwnershipStatus.NOT_OWNED, "getaddressinfo"
+                if address_cache is not None:
+                    address_cache[address] = (status, source)
+            else:
+                saw_unknown = True
+                continue
+        if status is OwnershipStatus.CONFIRMED:
+            return OwnershipStatus.CONFIRMED, source
     return (OwnershipStatus.UNKNOWN if saw_unknown else OwnershipStatus.NOT_OWNED), "getaddressinfo"
 
 
 def _prevout(rpc: RPC, txid: str, vout: int,
-             block_context: dict[str, str] | None = None) -> tuple[int | None, dict[str, Any] | None, OwnershipStatus, str | None]:
+             block_context: dict[str, str] | None = None,
+             prevout_cache: dict[tuple[str, int, str | None], tuple[int | None, dict[str, Any] | None, OwnershipStatus, str | None]] | None = None,
+             address_cache: dict[str, tuple[OwnershipStatus, str | None]] | None = None) -> tuple[int | None, dict[str, Any] | None, OwnershipStatus, str | None]:
+    context_hash = block_context.get(txid) if isinstance(block_context, dict) else None
+    cache_key = (txid, vout, context_hash)
+    if prevout_cache is not None:
+        cached = prevout_cache.get(cache_key)
+        if cached is not None:
+            return cached
     try:
         result = PrevoutResolver(rpc).resolve(txid, vout, block_context)
     except AssertionError:
@@ -153,32 +174,46 @@ def _prevout(rpc: RPC, txid: str, vout: int,
         # Production callers use the verified block context and never take this
         # path; an actual RPC failure is not converted into a fallback.
         if block_context is not None:
-            return None, None, OwnershipStatus.UNKNOWN, None
+            resolved = (None, None, OwnershipStatus.UNKNOWN, None)
+            return resolved
         transaction, error = rpc("getrawtransaction", [txid, 1])
         if error or not isinstance(transaction, dict) or transaction.get("txid") not in (None, txid):
-            return None, None, OwnershipStatus.UNKNOWN, None
+            resolved = (None, None, OwnershipStatus.UNKNOWN, None)
+            return resolved
         outputs = transaction.get("vout")
         if not isinstance(outputs, list) or not 0 <= vout < len(outputs) or not isinstance(outputs[vout], dict):
-            return None, None, OwnershipStatus.UNKNOWN, None
+            resolved = (None, None, OwnershipStatus.UNKNOWN, None)
+            return resolved
         output = outputs[vout]
         script = output.get("scriptPubKey") if isinstance(output.get("scriptPubKey"), dict) else None
         value = _atomic(output.get("value"))
-        ownership, source = _ownership(rpc, _addresses(script, "addresses"))
-        return value, script, ownership, source
+        ownership, source = _ownership(rpc, _addresses(script, "addresses"), address_cache)
+        resolved = (value, script, ownership, source)
+        if value is not None and prevout_cache is not None:
+            prevout_cache[cache_key] = resolved
+        return resolved
     if result.status is not PrevoutStatus.VERIFIED or not isinstance(result.transaction, dict):
-        return None, None, OwnershipStatus.UNKNOWN, result.source
+        resolved = (None, None, OwnershipStatus.UNKNOWN, result.source)
+        return resolved
     if result.source == "gettxout":
         script = result.transaction.get("scriptPubKey")
         script = script if isinstance(script, dict) else None
-        ownership, source = _ownership(rpc, _addresses(script, "addresses"))
-        return _atomic(result.value), script, ownership, source or result.source
+        ownership, source = _ownership(rpc, _addresses(script, "addresses"), address_cache)
+        resolved = (_atomic(result.value), script, ownership, source or result.source)
+        if resolved[0] is not None and prevout_cache is not None:
+            prevout_cache[cache_key] = resolved
+        return resolved
     outputs = result.transaction.get("vout")
     if not isinstance(outputs, list) or not 0 <= vout < len(outputs) or not isinstance(outputs[vout], dict):
-        return None, None, OwnershipStatus.UNKNOWN, result.source
+        resolved = (None, None, OwnershipStatus.UNKNOWN, result.source)
+        return resolved
     output = outputs[vout]
     script = output.get("scriptPubKey") if isinstance(output.get("scriptPubKey"), dict) else None
-    ownership, source = _ownership(rpc, _addresses(script, "addresses"))
-    return _atomic(result.value), script, ownership, source or result.source
+    ownership, source = _ownership(rpc, _addresses(script, "addresses"), address_cache)
+    resolved = (_atomic(result.value), script, ownership, source or result.source)
+    if resolved[0] is not None and prevout_cache is not None:
+        prevout_cache[cache_key] = resolved
+    return resolved
 
 
 def normalize_reward_transaction(block: dict[str, Any], rpc: RPC,
@@ -190,12 +225,19 @@ def normalize_reward_transaction(block: dict[str, Any], rpc: RPC,
         empty = attribute_reward([], [])
         return NormalizedRewardTransaction(None, None, None, (), (), EvidenceStatus.UNKNOWN, empty)
 
+    prevout_cache: dict[tuple[str, int, str | None],
+                        tuple[int | None, dict[str, Any] | None, OwnershipStatus, str | None]] = {}
+    address_cache: dict[str, tuple[OwnershipStatus, str | None]] = {}
+
     normalized_inputs: list[NormalizedInput] = []
     for item in tx.get("vin", []):
         if not isinstance(item, dict) or not isinstance(item.get("txid"), str) or not isinstance(item.get("vout"), int):
             normalized_inputs.append(NormalizedInput(None, None, None, None, OwnershipStatus.UNKNOWN, None, EvidenceStatus.UNKNOWN))
             continue
-        value, script, owner, source = _prevout(rpc, item["txid"], item["vout"], block_context)
+        value, script, owner, source = _prevout(
+            rpc, item["txid"], item["vout"], block_context,
+            prevout_cache, address_cache,
+        )
         normalized_inputs.append(NormalizedInput(item["txid"], item["vout"], value, script, owner, source, EvidenceStatus.VERIFIED if value is not None else EvidenceStatus.UNKNOWN))
 
     normalized_outputs: list[NormalizedOutput] = []
@@ -206,7 +248,7 @@ def normalize_reward_transaction(block: dict[str, Any], rpc: RPC,
         data_output = _is_ghost_data_output(item)
         addresses = _addresses(script, "addresses")
         owner, source = ((OwnershipStatus.UNKNOWN, "getblock") if data_output
-                         else _ownership(rpc, addresses))
+                         else _ownership(rpc, addresses, address_cache))
         output_class = item.get("output_class") if isinstance(item.get("output_class"), str) else None
         if output_class is None:
             output_class = "data" if data_output else "unknown"
