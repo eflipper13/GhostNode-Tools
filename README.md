@@ -56,6 +56,20 @@ installation, read-only Ghost Core configuration, dashboard access, collector
 review, troubleshooting and safe updates, see
 [docs/INSTALLATION.md](docs/INSTALLATION.md).
 
+## Documentation
+
+- [INSTALL.md](INSTALL.md) - short Debian/Ubuntu installation workflow.
+- [docs/INSTALLATION.md](docs/INSTALLATION.md) - complete installation and safe
+  update guide.
+- [CONFIGURATION.md](CONFIGURATION.md) - environment variables and defaults.
+- [SECURITY.md](SECURITY.md) - read-only, credential, wallet, and network
+  boundaries.
+- [docs/GHOST_CORE_SETUP.md](docs/GHOST_CORE_SETUP.md) - detection, setup
+  guidance, and first-run workflow.
+- [docs/staking-intelligence.md](docs/staking-intelligence.md) - current
+  collector, storage, locking, and reward design.
+- [CHANGELOG.md](CHANGELOG.md) - public release history.
+
 ## Tests
 
 ```bash
