@@ -43,11 +43,12 @@ not known and cannot prove completeness beyond the wallet-history limit.
 
 ## Reward normalization RPC cache
 
-Reward normalization may reuse successful or explicitly invalid prevout and
+Reward normalization may reuse successful verified prevout and
 address classifications only within one call to `normalize_reward_transaction`.
 Prevout reuse requires the TXID, VOUT, and verified block-context hash to match.
 Address reuse requires the exact address and RPC result to be unambiguous.
-Transient RPC failures and missing `ismine`/ownership evidence are not cached.
+Transient RPC failures, malformed prevout responses, INVALID classifications,
+and missing `ismine`/ownership evidence are not cached.
 Caches are local variables and are discarded after the block; they are never
 persisted or shared across block plans, worker cycles, or normalization calls.
 

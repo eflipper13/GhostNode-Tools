@@ -194,8 +194,6 @@ def _prevout(rpc: RPC, txid: str, vout: int,
         return resolved
     if result.status is not PrevoutStatus.VERIFIED or not isinstance(result.transaction, dict):
         resolved = (None, None, OwnershipStatus.UNKNOWN, result.source)
-        if result.status is PrevoutStatus.INVALID and prevout_cache is not None:
-            prevout_cache[cache_key] = resolved
         return resolved
     if result.source == "gettxout":
         script = result.transaction.get("scriptPubKey")
@@ -208,8 +206,6 @@ def _prevout(rpc: RPC, txid: str, vout: int,
     outputs = result.transaction.get("vout")
     if not isinstance(outputs, list) or not 0 <= vout < len(outputs) or not isinstance(outputs[vout], dict):
         resolved = (None, None, OwnershipStatus.UNKNOWN, result.source)
-        if result.status is PrevoutStatus.INVALID and prevout_cache is not None:
-            prevout_cache[cache_key] = resolved
         return resolved
     output = outputs[vout]
     script = output.get("scriptPubKey") if isinstance(output.get("scriptPubKey"), dict) else None
